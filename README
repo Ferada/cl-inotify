@@ -4,7 +4,5 @@ Interface to the linux inotify API.  Rudimentary, but working.
 
 Implementations currently supported: SBCL
 
-TODO:
-- extend to other APIs?
-- easier interface for (e)poll/select maybe using iolib
-- fix implementation dependent stuff
+Uses the binary-types library (ASDF enhanced from
+http://github.com/Ferada/cl-notify or see http://www.cliki.net/Binary-types).
