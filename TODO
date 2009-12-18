@@ -1,4 +1,0 @@
-- extend to other APIs?
-- easier interface for (e)poll/select maybe using iolib
-- fix implementation dependent stuff
-- encoding for pathnames
