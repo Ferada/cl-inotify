@@ -1,8 +1,11 @@
 CL-NOTIFY
 
-Interface to the linux inotify API.  Rudimentary, but working.
+Interface to the linux inotify API.  Working, but unfinished.
 
 Implementations currently supported: SBCL
 
 Uses the binary-types library (ASDF enhanced from
-http://github.com/Ferada/cl-notify or see http://www.cliki.net/Binary-types ).
+http://github.com/Ferada/cl-notify or see http://www.cliki.net/Binary-types).
+
+Copyright (C) 2009 Olof-Joachim Frahm
+Released under the GPL3 (or any later version).
