@@ -109,7 +109,7 @@ NAME optionally identifies a file relative to a watched directory."
 
 ;;;; basic wrapping of the API
 
-(defun read-raw-event (stream)
+(defun read-raw-event-from-stream (stream)
   "Reads a raw event from the inotify stream."
   (let* ((event (binary-types:read-binary 'inotify-event stream))
 	 (len (binary-types:read-binary 'binary-types:u32 stream)))
@@ -122,7 +122,7 @@ NAME optionally identifies a file relative to a watched directory."
 
 (defun read-event-from-stream (stream)
   "Reads a event from the inotify stream and converts bitmasks on reading."
-  (let ((event (read-raw-event stream)))
+  (let ((event (read-raw-event-from-stream stream)))
     (with-slots (mask) event
       (setf mask (foreign-bitfield-symbols 'inotify-flag mask)))
     event))

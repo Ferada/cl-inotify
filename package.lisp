@@ -7,11 +7,14 @@
 	   #:inotify-read-flag
 	   #:inotify-add-flag
 
+	   ;;; very raw
+	   #:read-raw-event-from-stream
+
 	   #:close-notify
 
 	   ;;; event parsing functions
 	   #:make-unregistered-notify
-	   #:read-raw-event
+	   #:read-event-from-stream
 	   #:watch-raw
 	   #:unwatch-raw
 
