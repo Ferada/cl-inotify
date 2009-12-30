@@ -97,15 +97,29 @@ NAME optionally identifies a file relative to a watched directory."
 
 ;;;; initialisation and stuff
 
-(defun init-endian ()
-  "Initialises endianess for the BINARY-TYPES library."
-  (setf binary-types:*endian*
-	#+little-endian :little-endian
-	#+big-endian :big-endian
-	#-(or little-endian big-endian) (error "unknown endianess")))
+(defun read-new-value (&optional (stream *query-io*))
+  "READs a value from the STREAM and returns it (wrapped in a list)."
+  (format stream "Enter a new value: ~%")
+  (list (read *query-io*)))
 
-;; um, in what evel-when should this be wrapped?
-(init-endian)
+(defun init-endian ()
+  "Initialises the endianess for the BINARY-TYPES library.  Is automatically
+called when the library is loaded."
+  (setf binary-types:*endian*
+	(restart-case #+little-endian :little-endian
+		      #+big-endian :big-endian
+		      #-(or little-endian big-endian) (error "unknown endianess")
+	  (use-value (value)
+	    :report "Enter a correct value (either :LITTLE-ENDIAN or :BIG-ENDIAN)."
+	    :interactive read-new-value
+	    ;; TODO: better way to test for correct value/retry values?
+	    (case value
+	      ((:little-endian :big-endian) value)
+	      (T (error "wrong value supplied (not :LITTLE-ENDIAN or :BIG-ENDIAN)")))))))
+
+;; initialise the endianess
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (init-endian))
 
 ;;;; basic wrapping of the API
 
@@ -128,11 +142,13 @@ NAME optionally identifies a file relative to a watched directory."
     event))
 
 (defun set-nonblocking (fd nonblocking)
+  "Enables or disables NONBLOCKING mode on a file descriptor FD."
   (let ((flags (sb-posix:fcntl fd sb-posix:f-getfl)))
     ;; an error is raised if this fails, so we don't have to do it ourselves
     (sb-posix:fcntl fd sb-posix:f-setfl
 		    (funcall (if nonblocking #'logior #'logxor)
-			     flags sb-posix:o-nonblock))))
+			     flags sb-posix:o-nonblock)))
+  (values))
 
 (defun init-unregistered-notify (notify &optional (nonblocking T))
   "Creates a new inotify event queue.  If NONBLOCKING is set (default),
@@ -162,6 +178,7 @@ the file descriptor is set to non-blocking I/O."
   notify)
 
 (defun make-unregistered-notify ()
+  "Creates a new unregistered NOTIFY instance."
   (init-unregistered-notify (make-inotify-instance)))
 
 (defun close-notify (notify)
@@ -172,7 +189,7 @@ the file descriptor is set to non-blocking I/O."
 (defun watch-raw (notify pathname flags)
   "Adds PATHNAME (either pathname or string) to be watched.  FLAGS
 determines how exactly (see inotify(7) for detailed information).
-Returns a handle which can be used with UNWATCH."
+Returns a handle which can be used with UNWATCH-RAW."
   (let ((path (princ-to-string pathname))
 	result)
     (setf result (c-inotify-add-watch
@@ -205,6 +222,8 @@ paths in a dictionary."
   watched)
 
 (defun make-notify (&optional (nonblocking T))
+  "Creates a new registered NOTIFY instance.  In NONBLOCKING mode, the file
+descriptor is set to non-blocking mode."
   (let ((result (make-registered-inotify-instance)))
     (init-unregistered-notify result nonblocking)
     (with-slots (watched) result
@@ -219,12 +238,16 @@ else NIL."
 
 ;; TODO: handle additional flags, save only list of flags
 (defun watch (notify pathname flags)
+  "Adds PATHNAME (either pathname or string) to be watched and records the
+watched paths.  FLAGS determines how exactly (see inotify(7) for detailed
+information).  Returns a handle which can be used with UNWATCH."
   (let ((handle (watch-raw notify pathname flags)))
     (with-slots (watched) notify
       (setf (gethash pathname watched) (cons handle flags)))
     handle))
 
 (defun unwatch (notify &key pathname handle)
+  "Disables watching the path associated with the supplied HANDLE or PATHNAME."
   (unless (or pathname handle)
     (error "either PATHNAME or HANDLE has to be specified"))
   (if handle
@@ -246,7 +269,8 @@ else NIL."
     result))
 
 (defun unix-eagainp (fd-stream)
-  "Returns T on a FD-STREAM, if trying to read raised a EAGAIN error."
+  "Returns T on a FD-STREAM if trying to read from the stream raised a EAGAIN
+error."
   (multiple-value-bind (result error)
       (sb-unix:unix-read (sb-sys:fd-stream-fd fd-stream) NIL 0)
     (declare (ignore result))

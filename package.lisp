@@ -32,4 +32,4 @@
 	   #:do-events
 	   #:read-events
 	   )
-  (:documentation "A binding for the LINUX inotify(7) API."))
+  (:documentation "A binding (not only?) for the LINUX inotify(7) API."))
