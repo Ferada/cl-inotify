@@ -97,25 +97,27 @@ NAME optionally identifies a file relative to a watched directory."
 
 ;;;; initialisation and stuff
 
-(defun read-new-value (&optional (stream *query-io*))
-  "READs a value from the STREAM and returns it (wrapped in a list)."
-  (format stream "Enter a new value: ~%")
-  (list (read *query-io*)))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun read-new-value (&optional (stream *query-io*))
+    "READs a value from the STREAM and returns it (wrapped in a list)."
+    (format stream "Enter a new value: ~%")
+    (list (read *query-io*))))
 
-(defun init-endian ()
-  "Initialises the endianess for the BINARY-TYPES library.  Is automatically
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun init-endian ()
+    "Initialises the endianess for the BINARY-TYPES library.  Is automatically
 called when the library is loaded."
-  (setf binary-types:*endian*
-	(restart-case #+little-endian :little-endian
-		      #+big-endian :big-endian
-		      #-(or little-endian big-endian) (error "unknown endianess")
-	  (use-value (value)
-	    :report "Enter a correct value (either :LITTLE-ENDIAN or :BIG-ENDIAN)."
-	    :interactive read-new-value
-	    ;; TODO: better way to test for correct value/retry values?
-	    (case value
-	      ((:little-endian :big-endian) value)
-	      (T (error "wrong value supplied (not :LITTLE-ENDIAN or :BIG-ENDIAN)")))))))
+    (setf binary-types:*endian*
+	  (restart-case #+little-endian :little-endian
+			#+big-endian :big-endian
+			#-(or little-endian big-endian) (error "unknown endianess")
+			(use-value (value)
+			  :report "Enter a correct value (either :LITTLE-ENDIAN or :BIG-ENDIAN)."
+			  :interactive read-new-value
+			  ;; TODO: better way to test for correct value/retry values?
+			  (case value
+			    ((:little-endian :big-endian) value)
+			    (T (error "wrong value supplied (not :LITTLE-ENDIAN or :BIG-ENDIAN)"))))))))
 
 ;; initialise the endianess
 (eval-when (:compile-toplevel :load-toplevel :execute)
@@ -155,7 +157,7 @@ called when the library is loaded."
 the file descriptor is set to non-blocking I/O."
   (let ((result (c-inotify-init)))
     (when (minusp result)
-      (error "inotify_init failed: ~A" result))
+      (perror "inotify_init failed"))
     (with-slots (fd stream (non-block nonblocking)) notify
       (unwind-protect
 	   ;; file descriptor is collected with auto-close
@@ -186,29 +188,38 @@ the file descriptor is set to non-blocking I/O."
   (close (inotify-stream notify))
   (values))
 
+(defun perror (prefix-string)
+  #+sbcl (sb-int:simple-perror prefix-string)
+  #-(or sbcl) (error prefix-string))
+
+(defun ensure-list (arg)
+  (if (listp arg) arg `(,arg)))
+
+(defun translate-keyword-flags (flags)
+  (typecase flags
+    ((or keyword list)
+     (foreign-bitfield-value 'inotify-flag (ensure-list flags)))
+    (T flags)))
+
 (defun watch-raw (notify pathname flags)
-  "Adds PATHNAME (either pathname or string) to be watched.  FLAGS
-determines how exactly (see inotify(7) for detailed information).
-Returns a handle which can be used with UNWATCH-RAW."
-  (let ((path (princ-to-string pathname))
-	result)
-    (setf result (c-inotify-add-watch
-		  (inotify-fd notify)
-		  path
-		  (typecase flags
-		    (list (foreign-bitfield-value 'inotify-flag flags))
-		    (keyword (foreign-bitfield-value 'inotify-flag
-						     (list flags)))
-		    (T flags))))
+  "Adds PATHNAME (either of type PATHNAME or STRING) to be watched.  FLAGS
+determines how exactly (see inotify(7) for detailed information) and can
+be of type LIST, KEYWORD or raw a raw numerical value (which isn't checked
+for validity).  Returns a handle which can be used with UNWATCH-RAW."
+  (let ((path (etypecase pathname
+		(string pathname)
+		(pathname (namestring pathname))))
+	(result (c-inotify-add-watch (inotify-fd notify)
+				     path (translate-keyword-flags flags))))
     (when (minusp result)
-      (error "inotify_add_watch failed: ~A" result))
+      (perror "inotify_add_watch failed"))
     result))
 
 (defun unwatch-raw (notify handle)
-  "Disables watching the path associated with HANDLE."
+  "Stops watching the path associated with a HANDLE established by WATCH-RAW."
   (let ((result (c-inotify-rm-watch (inotify-fd notify) handle)))
     (when (minusp result)
-      (error "inotify_rm_watch failed: ~A" result)))
+      (perror "inotify_rm_watch failed")))
   (values))
 
 ;;;; support functions, making life easier
@@ -261,25 +272,22 @@ information).  Returns a handle which can be used with UNWATCH."
 
 (defun list-watched (notify)
   "Returns a list of all watched pathnames in particular order."
-  (let (result)
-    (maphash (lambda (k v)
-	       (declare (ignore v))
-	       (push k result))
-	     (inotify-watched notify))
-    result))
+  (loop
+     for pathname being each hash-key in (inotify-watched notify)
+     collect pathname))
 
-(defun unix-eagainp (fd-stream)
-  "Returns T on a FD-STREAM if trying to read from the stream raised a EAGAIN
-error."
+(defun unix-eagain-p (fd-stream)
+  "Returns T on a FD-STREAM if trying to read from the stream raised a
+EAGAIN error."
   (multiple-value-bind (result error)
       (sb-unix:unix-read (sb-sys:fd-stream-fd fd-stream) NIL 0)
     (declare (ignore result))
     (= error sb-unix:eagain)))
 
-(defun event-availablep (notify)
+(defun event-available-p (notify)
   "Returns T if an event is available on the queue."
   (if (inotify-nonblocking notify)
-      (not (unix-eagainp (inotify-stream notify)))
+      (not (unix-eagain-p (inotify-stream notify)))
       (listen (inotify-stream notify))))
 
 (defun read-event (notify)
@@ -288,19 +296,22 @@ error."
 
 (defun next-event (notify)
   "Reads an event from the queue.  Returns NIL if none is available."
-  (when (event-availablep notify)
+  (when (event-available-p notify)
     (read-event notify)))
 
 (defmacro! do-events ((var o!notify) &body body)
-  "Loops BODY with VAR bound to the events retrieved from NOTIFY.  The macro
-uses NEXT-EVENT, so that reading an event won't block."
-  `(loop as ,var = (next-event ,g!notify)
-      while ,var
-      do (progn ,.body)))
+  "Loops BODY with VAR bound to the next events retrieved from NOTIFY.
+The macro uses NEXT-EVENT, so reading an event won't block and the returns
+terminates if no events are available."
+  `(loop
+      with ,var
+      while (event-available-p ,g!notify)
+      do (progn
+	   (setf ,var (read-event ,g!notify))
+	   ,.body)))
 
 (defun next-events (notify)
-  "Reads all available events from the queue.  Returns a list of events."
-  (let (result)
-   (do-events (event notify)
-     (push event result))
-   (nreverse result)))
+  "Reads all available events from the queue.  Returns a LIST of events."
+  (loop
+     while (event-available-p notify)
+     collect (read-event notify)))
