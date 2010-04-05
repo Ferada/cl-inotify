@@ -1,7 +1,7 @@
 (in-package #:cl-user)
 
-(defpackage cl-notify
-  (:use #:cl #:cffi #:utils-frahm #:anaphora)
+(defpackage cl-inotify
+  (:use #:cl #:cffi)
   (:export ;;; used types for documentation
 	   #:inotify-add/read-flag
 	   #:inotify-read-flag

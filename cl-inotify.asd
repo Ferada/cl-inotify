@@ -3,8 +3,8 @@
 (eval-when (:load-toplevel :execute)
   (asdf:operate 'asdf:load-op 'cffi-grovel))
 
-(asdf:defsystem cl-notify
-  :depends-on (#:cffi #:binary-types #:utils-frahm-common)
+(asdf:defsystem cl-inotify
+  :depends-on (#:cffi #:binary-types)
   :serial T
   :components ((:file "package")
 	       (cffi-grovel:grovel-file "grovel")

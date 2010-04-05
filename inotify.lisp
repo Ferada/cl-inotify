@@ -13,35 +13,35 @@
 ;; You should have received a copy of the GNU General Public License along
 ;; with this program; if not, see <http://www.gnu.org/licenses/>.
 
-(in-package #:cl-notify)
+(in-package #:cl-inotify)
 
 (defbitfield (inotify-flag :uint32)
-  (:access #.in-access)
-  (:modify #.in-modify)
-  (:attrib #.in-attrib)
-  (:close-write #.in-close-write)
+  (:access        #.in-access)
+  (:modify        #.in-modify)
+  (:attrib        #.in-attrib)
+  (:close-write   #.in-close-write)
   (:close-nowrite #.in-close-nowrite)
-  (:close #.in-close)
-  (:open #.in-open)
-  (:moved-from #.in-moved-from)
-  (:moved-to #.in-moved-to)
-  (:move #.in-move)
-  (:create #.in-create)
-  (:delete #.in-delete)
-  (:delete-self #.in-delete-self)
-  (:move-self #.in-move-self)
-  (:unmount #.in-unmount)
-  (:q-overflow #.in-q-overflow)
-  (:ignored #.in-ignored)
-  (:onlydir #.in-onlydir)
-  (:dont-follow #.in-dont-follow)
-  (:mask-add #.in-mask-add)
-  (:isdir #.in-isdir)
-  (:oneshot #.in-oneshot)
-  (:all-events #.in-all-events))
+  (:close         #.in-close)
+  (:open          #.in-open)
+  (:moved-from    #.in-moved-from)
+  (:moved-to      #.in-moved-to)
+  (:move          #.in-move)
+  (:create        #.in-create)
+  (:delete        #.in-delete)
+  (:delete-self   #.in-delete-self)
+  (:move-self     #.in-move-self)
+  (:unmount       #.in-unmount)
+  (:q-overflow    #.in-q-overflow)
+  (:ignored       #.in-ignored)
+  (:onlydir       #.in-onlydir)
+  (:dont-follow   #.in-dont-follow)
+  (:mask-add      #.in-mask-add)
+  (:isdir         #.in-isdir)
+  (:oneshot       #.in-oneshot)
+  (:all-events    #.in-all-events))
 
 (deftype inotify-add/read-flag ()
-  "Shared valid flags for the WATCH and READ-EVENT functions."
+  "Shared valid flags for the WATCH-RAW and READ-EVENT functions."
   '(member
     :access :attrib 
     :close-write :close-nowrite :close
@@ -50,15 +50,32 @@
     :move-self :moved-from :moved-to :move
     :open :all-events))
 
-(deftype inotify-add-flag ()
-  "Valid flags for the WATCH function."
-  '(or inotify-add/read-flag
-    (member :dont-follow :mask-add :oneshot :onlydir)))
-
 (deftype inotify-read-flag ()
   "Valid flags which are returned from READ-EVENT."
   '(or inotify-add/read-flag
     (member :ignored :isdir :q-overflow :unmount)))
+
+(deftype inotify-add-flag ()
+  "Valid flags for the WATCH-RAW function."
+  '(or inotify-add/read-flag
+    (member :dont-follow :mask-add :oneshot :onlydir)))
+
+(defun valid-watch-flag-p (x)
+  (and (typep x 'inotify-add-flag)
+       (not (eq :mask-add x))
+       (not (eq :oneshot x))))
+
+(defun valid-watch-flag-list-p (list)
+  (every #'valid-watch-flag-p list))
+
+(deftype watch-flag-list ()
+  "Valid flags argument for the WATCH function, a list of keywords from
+INOTIFY-ADD-FLAG.  Basically only :MASK-ADD and :ONESHOT are removed.
+The :MASK-ADD behaviour is replicated with the REPLACE-P argument; the
+:ONESHOT behaviour doesn't play well with the WATCH function design (and
+thus should be used only with WATCH-RAW)."
+  '(or (satisfies valid-watch-flag-p)
+       (and list (satisfies valid-watch-flag-list-p))))
 
 (defcfun ("inotify_init" c-inotify-init) :int
   "Initialises a new inotify event queue.")
@@ -204,13 +221,13 @@ the file descriptor is set to non-blocking I/O."
 (defun watch-raw (notify pathname flags)
   "Adds PATHNAME (either of type PATHNAME or STRING) to be watched.  FLAGS
 determines how exactly (see inotify(7) for detailed information) and can
-be of type LIST, KEYWORD or raw a raw numerical value (which isn't checked
-for validity).  Returns a handle which can be used with UNWATCH-RAW."
-  (let ((path (etypecase pathname
-		(string pathname)
-		(pathname (namestring pathname))))
-	(result (c-inotify-add-watch (inotify-fd notify)
-				     path (translate-keyword-flags flags))))
+be of type LIST, KEYWORD or a raw numerical value (which isn't checked
+for validity though).  Returns a handle which can be used with UNWATCH-RAW."
+  (let* ((path (etypecase pathname
+		 (string pathname)
+		 (pathname (namestring pathname))))
+	 (result (c-inotify-add-watch (inotify-fd notify)
+				      path (translate-keyword-flags flags))))
     (when (minusp result)
       (perror "inotify_add_watch failed"))
     result))
@@ -242,17 +259,33 @@ descriptor is set to non-blocking mode."
     result))
 
 (defun watchedp (notify pathname)
-  "Returns the tuple (HANDLE . FLAGS) if PATHNAME is being watched by NOTIFY,
+  "Returns two values HANDLE and FLAGS if PATHNAME is being watched by NOTIFY,
 else NIL."
-  (awhen (gethash pathname (inotify-watched notify))
-    (values (car it) (cdr it))))
+  (let ((it (gethash pathname (inotify-watched notify))))
+    (when it (values (car it) (cdr it)))))
 
-;; TODO: handle additional flags, save only list of flags
-(defun watch (notify pathname flags)
+(defun sane-user-flags (notify pathname flags &key (replace-p T))
+  (check-type flags watch-flag-list)
+  ;; now, :mask-add can't be member of flags
+  ;; merge the flags
+  (let* ((flags (ensure-list flags))
+	 (rep-flags (if replace-p
+			(cons :mask-add flags)
+			flags)))
+    (let ((it (gethash pathname (slot-value notify 'watched))))
+      (if it
+	  (union (cdr it) rep-flags :test #'eq)
+	  rep-flags))))
+
+(defun watch (notify pathname flags &key (replace-p T))
   "Adds PATHNAME (either pathname or string) to be watched and records the
-watched paths.  FLAGS determines how exactly (see inotify(7) for detailed
-information).  Returns a handle which can be used with UNWATCH."
-  (let ((handle (watch-raw notify pathname flags)))
+watched paths.  FLAGS (a list of keywords) determines how exactly (see
+inotify(7) for detailed information).  Returns a handle which can be used
+with UNWATCH.  If REPLACE-P is set to T (default), the flags mask is
+replaced rather than OR-ed to the current mask (if it exists).  The
+:MASK-ADD flag is therefore removed from the FLAGS argument."
+  (let* ((flags (sane-user-flags notify pathname flags :replace-p replace-p))
+	 (handle (watch-raw notify pathname flags)))
     (with-slots (watched) notify
       (setf (gethash pathname watched) (cons handle flags)))
     handle))
@@ -266,12 +299,13 @@ information).  Returns a handle which can be used with UNWATCH."
       (let ((handle (watchedp notify pathname)))
 	(unless handle
 	  (error "PATHNAME ~S isn't being watched" pathname))
-	(unwatch-raw notify handle)
-	(remhash pathname (inotify-watched notify))))
+	;; remove even if unwatch-raw throws an error (which can happen if :oneshot is specified)
+	(remhash pathname (inotify-watched notify))
+	(unwatch-raw notify handle)))
   (values))
 
 (defun list-watched (notify)
-  "Returns a list of all watched pathnames in particular order."
+  "Returns a list of all watched pathnames in no particular order."
   (loop
      for pathname being each hash-key in (inotify-watched notify)
      collect pathname))
@@ -299,16 +333,19 @@ EAGAIN error."
   (when (event-available-p notify)
     (read-event notify)))
 
-(defmacro! do-events ((var o!notify) &body body)
+(defmacro do-events ((var notify &key blocking-p) &body body)
   "Loops BODY with VAR bound to the next events retrieved from NOTIFY.
-The macro uses NEXT-EVENT, so reading an event won't block and the returns
+The macro uses NEXT-EVENT, so reading an event won't block and the loop
 terminates if no events are available."
-  `(loop
-      with ,var
-      while (event-available-p ,g!notify)
-      do (progn
-	   (setf ,var (read-event ,g!notify))
-	   ,.body)))
+  (check-type var symbol)
+  (let ((notify-sym (gensym)))
+   `(loop
+       with ,var and ,notify-sym = ,notify
+       ,.(unless blocking-p
+	   `(while (event-available-p ,notify-sym)))
+       do (progn
+	    (setf ,var (read-event ,notify-sym))
+	    ,.body))))
 
 (defun next-events (notify)
   "Reads all available events from the queue.  Returns a LIST of events."

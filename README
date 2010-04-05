@@ -1,4 +1,4 @@
-CL-NOTIFY - Interface to the linux inotify API.
+CL-INOTIFY - Interface to the linux inotify API.
 
 Copyright (C) 2009 Olof-Joachim Frahm
 Released under the GPL3 (or any later version).
