@@ -46,7 +46,8 @@
 
 	   ;;; enhanced functionality
 	   #:make-inotify
-	   #:watchedp
+	   #:pathname-handle/flags
+	   #:event-pathname/flags
 	   #:watch
 	   #:unwatch
 	   #:event-availablep

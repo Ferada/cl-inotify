@@ -330,8 +330,8 @@ may be one from a given EVENT) or PATHNAME."
 (defun list-watched (inotify)
   "Returns a LIST of all watched pathnames in no particular order."
   (loop
-     for pathname being each hash-key in (inotify-watched inotify)
-     collect pathname))
+    for pathname being each hash-key in (inotify-watched inotify)
+    collect pathname))
 
 (defun unix-eagain-p (fd-stream)
   "Returns T on a FD-STREAM if trying to read from the stream raised a
@@ -363,15 +363,15 @@ terminates if no events are available."
   (check-type var symbol)
   (let ((inotify-sym (gensym)))
    `(loop
-       with ,var and ,inotify-sym = ,inotify
-       ,.(unless blocking-p
-	   `(while (event-available-p ,inotify-sym)))
-       do (progn
-	    (setf ,var (read-event ,inotify-sym))
-	    ,.body))))
+      with ,var and ,inotify-sym = ,inotify
+      ,.(unless blocking-p
+	  `(while (event-available-p ,inotify-sym)))
+      do (progn
+	   (setf ,var (read-event ,inotify-sym))
+	   ,.body))))
 
 (defun next-events (inotify)
   "Reads all available events from the queue.  Returns a LIST of events."
   (loop
-     while (event-available-p inotify)
-     collect (read-event inotify)))
+    while (event-available-p inotify)
+    collect (read-event inotify)))
