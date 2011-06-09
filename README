@@ -11,6 +11,8 @@ trivial-utf-8.  Doesn't use iolib, because we don't need most of the
 functionality, although it might gain us some implementation
 independence (patches which can be conditionally compiled are welcome).
 
+A similar package is at [stassats Github][3].
+
 
 # HOWTO
 
@@ -87,3 +89,4 @@ LINKS
 
 [1]: https://github.com/Ferada/binary-types
 [2]: http://www.cliki.net/Binary-types
+[3]: https://github.com/stassats/inotify
