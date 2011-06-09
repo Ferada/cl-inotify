@@ -1,10 +1,10 @@
 CL-INOTIFY - Interface to the Linux inotify API.
 
-Copyright (C) 2009 Olof-Joachim Frahm
-Released under the GPL3 (or any later version).
+Copyright (C) 2011 Olof-Joachim Frahm
+Released under a Simplified BSD license.
 
 Working, but unfinished.
-Implementations currently tested on: SBCL
+Implementations currently tested on: SBCL.
 
 Uses CFFI and the binary-types library (from [1] or see [2]).
 
