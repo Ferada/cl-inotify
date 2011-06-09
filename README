@@ -57,6 +57,11 @@ The raw API, which doesn't register watched paths, consists of
 they're exported in case someone doesn't like the upper layers.
 
 
+In case you want to use `epoll` or `select` on the event queue you can
+access the file descriptor yourself and then use the normal functions
+afterwards.  Currently no such functionality is integrated here.
+
+
 # EXAMPLE
 
     > (use-package '#:cl-inotify)
@@ -74,9 +79,6 @@ they're exported in case someone doesn't like the upper layers.
 - make things more implementation independent
 - (maybe) don't use the libc for this, direct syscall
 - (maybe) add iolib replacement for io functions
-
-# DONE
-
 - easier interface for (e)poll/select maybe using iolib (done, using
   CL:LISTEN and/or SB-UNIX:UNIX-READ)
 
