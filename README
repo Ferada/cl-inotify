@@ -6,7 +6,7 @@ Released under a Simplified BSD license.
 Working, but unfinished.
 Implementations currently tested on: SBCL.
 
-Uses CFFI and the binary-types library (from [1] or see [2]).
+Uses CFFI, binary-types (from [1] or see [2]) and trivial-utf-8.
 
 
 HOWTO
