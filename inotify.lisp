@@ -159,9 +159,9 @@ called when the library is loaded."
 	 (len (binary-types:read-binary 'binary-types:u32 stream)))
     (when (plusp len)
       (with-slots (name) event
-	(setf name (binary-types:read-binary-string stream
-						    :size len
-						    :terminators '(0)))))
+	(let ((buffer (make-array len :element-type '(unsigned-byte 8))))
+	  (read-sequence buffer stream :end len)
+	  (setf name (trivial-utf-8:utf-8-bytes-to-string buffer :end (position 0 buffer))))))
     event))
 
 (defun read-event-from-stream (stream)
@@ -270,11 +270,19 @@ closed with CLOSE-INOTIFY."
       (setf watched (make-hash-table :test 'equal)))
     result))
 
-(defun watchedp (inotify pathname)
-  "Returns two values HANDLE and FLAGS if PATHNAME is being watched by INOTIFY,
-else NIL.  The match is exact."
-  (let ((it (gethash pathname (inotify-watched Inotify))))
-    (when it (values (car it) (cdr it)))))
+(defun pathname-handle/flags (inotify pathname)
+  "Returns a CONS cell with the values HANDLE and FLAGS if PATHNAME is
+being watched by INOTIFY, else NIL.  The match is exact."
+  (gethash pathname (inotify-watched inotify)))
+
+(defun event-pathname/flags (inotify event &optional (handle (slot-value event 'wd)))
+  "Returns two values PATHNAME and FLAGS for an EVENT which were used during
+registration.  If HANDLE is specified EVENT is ignored."
+  (block NIL
+    (maphash (lambda (pathname entry)
+	       (when (eql (car entry) handle)
+		 (return (values pathname (cdr entry)))))
+	     (inotify-watched inotify))))
 
 (defun sane-user-flags (inotify pathname flags &key (replace-p T))
   (check-type flags watch-flag-list)
@@ -293,22 +301,25 @@ else NIL.  The match is exact."
   "Adds PATHNAME (either pathname or string) to be watched and records the
 watched paths.  FLAGS (a list of keywords) determines how exactly (see
 inotify(7) for detailed information).  Returns a handle which can be used
-with UNWATCH.  If REPLACE-P is set to T (default), the flags mask is
-replaced rather than OR-ed to the current mask (if it exists).  The
-:MASK-ADD flag is therefore removed from the FLAGS argument."
+with UNWATCH and EVENT-PATHNAME/FLAGS.  If REPLACE-P is set to T (default),
+the flags mask is replaced rather than OR-ed to the current mask (if it
+exists).  The :MASK-ADD flag is therefore removed from the FLAGS argument."
   (let* ((flags (sane-user-flags inotify pathname flags :replace-p replace-p))
 	 (handle (watch-raw inotify pathname flags)))
     (with-slots (watched) inotify
       (setf (gethash pathname watched) (cons handle flags)))
     handle))
 
-(defun unwatch (inotify &key pathname handle)
-  "Disables watching the path associated with the supplied HANDLE or PATHNAME."
-  (unless (or pathname handle)
-    (error "either PATHNAME or HANDLE has to be specified"))
+(defun unwatch (inotify &key pathname event handle)
+  "Disables watching the path associated with the supplied HANDLE (which
+may be one from a given EVENT) or PATHNAME."
+  (unless (or pathname event handle)
+    (error "either PATHNAME, EVENT or HANDLE have to be specified"))
+  (when event
+    (setf handle (slot-value event 'wd)))
   (if handle
       (unwatch-raw inotify handle)
-      (let ((handle (watchedp inotify pathname)))
+      (let ((handle (car (pathname-handle/flags inotify pathname))))
 	(unless handle
 	  (error "PATHNAME ~S isn't being watched" pathname))
 	;; remove even if unwatch-raw throws an error (which can happen if :oneshot is specified)

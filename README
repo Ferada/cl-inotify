@@ -25,8 +25,8 @@ For example, to watch for modified or closed files in a directory, call
 (WATCH inotify "foo/" '(:modify :close)).
 
 The result of WATCH is a handle (currently a FIXNUM, but I wouldn't rely
-on that) which can be fed to UNWATCH, but isn't useful for anything
-else.
+on that) which can be fed to UNWATCH and can be translated from events
+with EVENT-PATHNAME/FLAGS.
 
 To finally get the events from the queue, use READ-EVENT (which blocks)
 or NEXT-EVENT (which doesn't block).  EVENT-AVAILABLEP does what it
@@ -34,8 +34,10 @@ should do, NEXT-EVENTS retrieves all currently available events as a
 list and DO-EVENTS (nonblocking) iterates over available events.
 
 The enhanced API registers all watched paths in a hashtable, so you can
-use WATCHEDP to check if a pathname (exact match) is being watched and
-LIST-WATCHED to return all watched paths as a list.
+use PATHNAME-HANDLE/FLAGS to check if a pathname (exact match) is being
+watched and LIST-WATCHED to return all watched paths as a list.
+EVENT-PATHNAME/FLAGS may be used to get the pathname and flags for a
+read event.
 
 UNWATCH has to be called with the path or the handle of the watched file
 or directory (a path'll looked up in the same table as with WATCHEDP).

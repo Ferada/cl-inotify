@@ -30,7 +30,7 @@
   (asdf:operate 'asdf:load-op 'cffi-grovel))
 
 (asdf:defsystem :cl-inotify
-  :depends-on (#:cffi #:binary-types)
+  :depends-on (#:cffi #:binary-types #:trivial-utf-8)
   :serial T
   :components ((:file "package")
 	       (cffi-grovel:grovel-file "grovel")
