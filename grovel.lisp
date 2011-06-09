@@ -1,6 +1,6 @@
-(include "sys/inotify.h")
-
 (in-package #:cl-inotify)
+
+(include "sys/inotify.h")
 
 (constant (in-access        "IN_ACCESS"))
 (constant (in-modify        "IN_MODIFY"))

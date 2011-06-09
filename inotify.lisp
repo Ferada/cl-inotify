@@ -169,13 +169,13 @@ called when the library is loaded."
 			     flags sb-posix:o-nonblock)))
   (values))
 
-(defun init-unregistered-notify (notify &optional (nonblocking T))
+(defun init-unregistered-inotify (inotify &optional (nonblocking T))
   "Creates a new inotify event queue.  If NONBLOCKING is set (default),
 the file descriptor is set to non-blocking I/O."
   (let ((result (c-inotify-init)))
     (when (minusp result)
       (perror "inotify_init failed"))
-    (with-slots (fd stream (non-block nonblocking)) notify
+    (with-slots (fd stream (non-block nonblocking)) inotify
       (unwind-protect
 	   ;; file descriptor is collected with auto-close
 	   (progn
@@ -194,15 +194,15 @@ the file descriptor is set to non-blocking I/O."
 	;; if stream is constructed, gc'ing it will cleanup the file descriptor
 	(unless stream
 	  (sb-posix:close fd)))))
-  notify)
+  inotify)
 
-(defun make-unregistered-notify ()
-  "Creates a new unregistered NOTIFY instance."
-  (init-unregistered-notify (make-inotify-instance)))
+(defun make-unregistered-inotify ()
+  "Creates a new unregistered INOTIFY instance."
+  (init-unregistered-inotify (make-inotify-instance)))
 
-(defun close-notify (notify)
+(defun close-inotify (inotify)
   "Closes the inotify event queue."
-  (close (inotify-stream notify))
+  (close (inotify-stream inotify))
   (values))
 
 (defun perror (prefix-string)
@@ -218,7 +218,7 @@ the file descriptor is set to non-blocking I/O."
      (foreign-bitfield-value 'inotify-flag (ensure-list flags)))
     (T flags)))
 
-(defun watch-raw (notify pathname flags)
+(defun watch-raw (inotify pathname flags)
   "Adds PATHNAME (either of type PATHNAME or STRING) to be watched.  FLAGS
 determines how exactly (see inotify(7) for detailed information) and can
 be of type LIST, KEYWORD or a raw numerical value (which isn't checked
@@ -226,15 +226,15 @@ for validity though).  Returns a handle which can be used with UNWATCH-RAW."
   (let* ((path (etypecase pathname
 		 (string pathname)
 		 (pathname (namestring pathname))))
-	 (result (c-inotify-add-watch (inotify-fd notify)
+	 (result (c-inotify-add-watch (inotify-fd inotify)
 				      path (translate-keyword-flags flags))))
     (when (minusp result)
       (perror "inotify_add_watch failed"))
     result))
 
-(defun unwatch-raw (notify handle)
+(defun unwatch-raw (inotify handle)
   "Stops watching the path associated with a HANDLE established by WATCH-RAW."
-  (let ((result (c-inotify-rm-watch (inotify-fd notify) handle)))
+  (let ((result (c-inotify-rm-watch (inotify-fd inotify) handle)))
     (when (minusp result)
       (perror "inotify_rm_watch failed")))
   (values))
@@ -249,22 +249,23 @@ for validity though).  Returns a handle which can be used with UNWATCH-RAW."
 paths in a dictionary."
   watched)
 
-(defun make-notify (&optional (nonblocking T))
-  "Creates a new registered NOTIFY instance.  In NONBLOCKING mode, the file
-descriptor is set to non-blocking mode."
+(defun make-inotify (&optional (nonblocking T))
+  "Creates a new registered INOTIFY instance.  In NONBLOCKING mode, the file
+descriptor is set to non-blocking mode.  The resulting object has to be
+closed with CLOSE-INOTIFY."
   (let ((result (make-registered-inotify-instance)))
-    (init-unregistered-notify result nonblocking)
+    (init-unregistered-inotify result nonblocking)
     (with-slots (watched) result
       (setf watched (make-hash-table :test 'equal)))
     result))
 
-(defun watchedp (notify pathname)
-  "Returns two values HANDLE and FLAGS if PATHNAME is being watched by NOTIFY,
-else NIL."
-  (let ((it (gethash pathname (inotify-watched notify))))
+(defun watchedp (inotify pathname)
+  "Returns two values HANDLE and FLAGS if PATHNAME is being watched by INOTIFY,
+else NIL.  The match is exact."
+  (let ((it (gethash pathname (inotify-watched Inotify))))
     (when it (values (car it) (cdr it)))))
 
-(defun sane-user-flags (notify pathname flags &key (replace-p T))
+(defun sane-user-flags (inotify pathname flags &key (replace-p T))
   (check-type flags watch-flag-list)
   ;; now, :mask-add can't be member of flags
   ;; merge the flags
@@ -272,42 +273,42 @@ else NIL."
 	 (rep-flags (if replace-p
 			(cons :mask-add flags)
 			flags)))
-    (let ((it (gethash pathname (slot-value notify 'watched))))
+    (let ((it (gethash pathname (slot-value inotify 'watched))))
       (if it
 	  (union (cdr it) rep-flags :test #'eq)
 	  rep-flags))))
 
-(defun watch (notify pathname flags &key (replace-p T))
+(defun watch (inotify pathname flags &key (replace-p T))
   "Adds PATHNAME (either pathname or string) to be watched and records the
 watched paths.  FLAGS (a list of keywords) determines how exactly (see
 inotify(7) for detailed information).  Returns a handle which can be used
 with UNWATCH.  If REPLACE-P is set to T (default), the flags mask is
 replaced rather than OR-ed to the current mask (if it exists).  The
 :MASK-ADD flag is therefore removed from the FLAGS argument."
-  (let* ((flags (sane-user-flags notify pathname flags :replace-p replace-p))
-	 (handle (watch-raw notify pathname flags)))
-    (with-slots (watched) notify
+  (let* ((flags (sane-user-flags inotify pathname flags :replace-p replace-p))
+	 (handle (watch-raw inotify pathname flags)))
+    (with-slots (watched) inotify
       (setf (gethash pathname watched) (cons handle flags)))
     handle))
 
-(defun unwatch (notify &key pathname handle)
+(defun unwatch (inotify &key pathname handle)
   "Disables watching the path associated with the supplied HANDLE or PATHNAME."
   (unless (or pathname handle)
     (error "either PATHNAME or HANDLE has to be specified"))
   (if handle
-      (unwatch-raw notify handle)
-      (let ((handle (watchedp notify pathname)))
+      (unwatch-raw inotify handle)
+      (let ((handle (watchedp inotify pathname)))
 	(unless handle
 	  (error "PATHNAME ~S isn't being watched" pathname))
 	;; remove even if unwatch-raw throws an error (which can happen if :oneshot is specified)
-	(remhash pathname (inotify-watched notify))
-	(unwatch-raw notify handle)))
+	(remhash pathname (inotify-watched inotify))
+	(unwatch-raw inotify handle)))
   (values))
 
-(defun list-watched (notify)
-  "Returns a list of all watched pathnames in no particular order."
+(defun list-watched (inotify)
+  "Returns a LIST of all watched pathnames in no particular order."
   (loop
-     for pathname being each hash-key in (inotify-watched notify)
+     for pathname being each hash-key in (inotify-watched inotify)
      collect pathname))
 
 (defun unix-eagain-p (fd-stream)
@@ -318,37 +319,37 @@ EAGAIN error."
     (declare (ignore result))
     (= error sb-unix:eagain)))
 
-(defun event-available-p (notify)
+(defun event-available-p (inotify)
   "Returns T if an event is available on the queue."
-  (if (inotify-nonblocking notify)
-      (not (unix-eagain-p (inotify-stream notify)))
-      (listen (inotify-stream notify))))
+  (if (inotify-nonblocking inotify)
+      (not (unix-eagain-p (inotify-stream inotify)))
+      (listen (inotify-stream inotify))))
 
-(defun read-event (notify)
+(defun read-event (inotify)
   "Reads an event from the queue.  Blocks if no event is available."
-  (read-event-from-stream (inotify-stream notify)))
+  (read-event-from-stream (inotify-stream inotify)))
 
-(defun next-event (notify)
+(defun next-event (inotify)
   "Reads an event from the queue.  Returns NIL if none is available."
-  (when (event-available-p notify)
-    (read-event notify)))
+  (when (event-available-p inotify)
+    (read-event inotify)))
 
-(defmacro do-events ((var notify &key blocking-p) &body body)
-  "Loops BODY with VAR bound to the next events retrieved from NOTIFY.
+(defmacro do-events ((var inotify &key blocking-p) &body body)
+  "Loops BODY with VAR bound to the next events retrieved from INOTIFY.
 The macro uses NEXT-EVENT, so reading an event won't block and the loop
 terminates if no events are available."
   (check-type var symbol)
-  (let ((notify-sym (gensym)))
+  (let ((inotify-sym (gensym)))
    `(loop
-       with ,var and ,notify-sym = ,notify
+       with ,var and ,inotify-sym = ,inotify
        ,.(unless blocking-p
-	   `(while (event-available-p ,notify-sym)))
+	   `(while (event-available-p ,inotify-sym)))
        do (progn
-	    (setf ,var (read-event ,notify-sym))
+	    (setf ,var (read-event ,inotify-sym))
 	    ,.body))))
 
-(defun next-events (notify)
+(defun next-events (inotify)
   "Reads all available events from the queue.  Returns a LIST of events."
   (loop
-     while (event-available-p notify)
-     collect (read-event notify)))
+     while (event-available-p inotify)
+     collect (read-event inotify)))

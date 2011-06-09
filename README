@@ -1,31 +1,28 @@
-CL-INOTIFY - Interface to the linux inotify API.
+CL-INOTIFY - Interface to the Linux inotify API.
 
 Copyright (C) 2009 Olof-Joachim Frahm
 Released under the GPL3 (or any later version).
 
 Working, but unfinished.
-Implementations currently supported: SBCL
+Implementations currently tested on: SBCL
 
-Uses CFFI, the binary-types (ASDF enhanced from
-http://github.com/Ferada/cl-notify or see
-http://www.cliki.net/Binary-types) and utils-frahm
-(http://github.com/Ferada/utils-frahm) libraries.
+Uses CFFI and the binary-types library (from [1] or see [2]).
 
 
 HOWTO
 
-After loading the library use MAKE-NOTIFY to create a new event queue.
+After loading the library use MAKE-INOTIFY to create a new event queue.
 The NONBLOCKING argument currently determines if we use the standard
 CL:LISTEN function or SB-UNIX:UNIX-READ to check for available events.
 
-The result of MAKE-NOTIFY is used with WATCH and UNWATCH, the first
+The result of MAKE-INOTIFY is used with WATCH and UNWATCH, the first
 being used to watch a file or directory, the second to stop watching
 it.  The FLAGS parameter of WATCH is described in the notify(7) manpage;
 you can use a combination of the flags (as keywords) to create a
 suitable bitmask.
 
 For example, to watch for modified or closed files in a directory, call
-(WATCH notify "foo/" '(:modify :close)).
+(WATCH inotify "foo/" '(:modify :close)).
 
 The result of WATCH is a handle (currently a FIXNUM, but I wouldn't rely
 on that) which can be fed to UNWATCH, but isn't useful for anything
@@ -36,8 +33,8 @@ or NEXT-EVENT (which doesn't block).  EVENT-AVAILABLEP does what it
 should do, NEXT-EVENTS retrieves all currently available events as a
 list and DO-EVENTS (nonblocking) iterates over available events.
 
-The enhanced API registers all watched paths in a table, so you can use
-WATCHEDP to check if a pathname (exact match) is being watched and
+The enhanced API registers all watched paths in a hashtable, so you can
+use WATCHEDP to check if a pathname (exact match) is being watched and
 LIST-WATCHED to return all watched paths as a list.
 
 UNWATCH has to be called with the path or the handle of the watched file
@@ -60,3 +57,9 @@ TODO
 DONE
 - easier interface for (e)poll/select maybe using iolib (done, using
   CL:LISTEN and/or SB-UNIX:UNIX-READ)
+
+
+LINKS
+
+[1]: http://github.com/Ferada/cl-notify
+[2]: http://www.cliki.net/Binary-types

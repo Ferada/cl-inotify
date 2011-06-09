@@ -10,16 +10,16 @@
 	   ;;; very raw
 	   #:read-raw-event-from-stream
 
-	   #:close-notify
+	   #:close-inotify
 
 	   ;;; event parsing functions
-	   #:make-unregistered-notify
+	   #:make-unregistered-inotify
 	   #:read-event-from-stream
 	   #:watch-raw
 	   #:unwatch-raw
 
 	   ;;; enhanced functionality
-	   #:make-notify
+	   #:make-inotify
 	   #:watchedp
 	   #:watch
 	   #:unwatch
@@ -30,6 +30,5 @@
 	   ;;; convenience functions
 	   #:list-watched
 	   #:do-events
-	   #:read-events
-	   )
+	   #:next-events)
   (:documentation "A binding (not only?) for the LINUX inotify(7) API."))
