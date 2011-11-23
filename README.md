@@ -1,9 +1,11 @@
-CL-INOTIFY - Interface to the Linux inotify API.
+CL-INOTIFY - Interface to the Linux inotify(7) API.
 
 Copyright (C) 2011 Olof-Joachim Frahm
+
 Released under a Simplified BSD license.
 
 Working, but unfinished.
+
 Implementations currently running on: SBCL.
 
 Uses CFFI, binary-types (from [my Github][1] or see [CLiki][2]) and
