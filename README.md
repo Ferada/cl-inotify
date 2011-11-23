@@ -87,8 +87,6 @@ afterwards.  Currently no such functionality is integrated here.
   CL:LISTEN and/or SB-UNIX:UNIX-READ)
 
 
-LINKS
-
 [1]: https://github.com/Ferada/binary-types
 [2]: http://www.cliki.net/Binary-types
 [3]: https://github.com/stassats/inotify
