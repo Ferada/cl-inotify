@@ -1,6 +1,6 @@
 ;;; -*- mode: lisp; syntax: common-lisp; coding: utf-8; package: cl-inotify; -*-
 
-;; Copyright (c) 2011, Olof-Joachim Frahm
+;; Copyright (c) 2011-12, Olof-Joachim Frahm
 ;; All rights reserved.
 
 ;; Redistribution and use in source and binary forms, with or without
@@ -209,9 +209,9 @@ the file descriptor is set to non-blocking I/O."
 	  (sb-posix:close fd)))))
   inotify)
 
-(defun make-unregistered-inotify ()
+(defun make-unregistered-inotify (&optional (nonblocking T))
   "Creates a new unregistered INOTIFY instance."
-  (init-unregistered-inotify (make-inotify-instance)))
+  (init-unregistered-inotify (make-inotify-instance) nonblocking))
 
 (defun close-inotify (inotify)
   "Closes the inotify event queue."
@@ -377,3 +377,35 @@ terminates if no events are available."
   (loop
     while (event-available-p inotify)
     collect (read-event inotify)))
+
+;;; this has the longer name, because this way you actually have to read
+;;; about the differences, at least i hope so
+(defmacro with-unregistered-inotify ((&optional inotify (nonblocking T) &rest rest) &body body)
+  "Like WITH-INOTIFY, but uses MAKE-UNREGISTERED-INOTIFY and WATCH-RAW
+instead.  Useful if you need to monitor just a fixed set of paths."
+  `(let* ((,inotify (make-unregistered-inotify ,nonblocking)))
+     (unwind-protect
+	  (progn
+	    ,.(mapcar (lambda (specifier)
+			`(watch-raw ,inotify ,.specifier))
+		      rest)
+	    ,.body)
+       (close-inotify ,inotify))))
+
+(defmacro with-inotify ((&optional inotify (nonblocking T) &rest rest) &body body)
+  "Executes BODY with a newly created queue bound to INOTIFY if true.
+See MAKE-INOTIFY for more information about possible arguments.
+
+The REST is a list of argument forms for the WATCH function, i.e. one or
+more forms (PATHNAME FLAGS &KEY (REPLACE-P T)).
+
+Since the QUEUE is closed on unwinding, this macro doesn't bother with
+UNWATCH calls on all WATCHed paths."
+  `(let* ((,inotify (make-inotify ,nonblocking)))
+     (unwind-protect
+	  (progn
+	    ,.(mapcar (lambda (specifier)
+			`(watch ,inotify ,.specifier))
+		      rest)
+	    ,.body)
+       (close-inotify ,inotify))))

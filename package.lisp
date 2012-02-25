@@ -1,6 +1,6 @@
 ;;; -*- mode: lisp; syntax: common-lisp; coding: utf-8; package: cl-user; -*-
 
-;; Copyright (c) 2011, Olof-Joachim Frahm
+;; Copyright (c) 2011-12, Olof-Joachim Frahm
 ;; All rights reserved.
 
 ;; Redistribution and use in source and binary forms, with or without
@@ -38,13 +38,25 @@
 	   ;;; very raw
 	   #:read-raw-event-from-stream
 
+	   ;;; basic stuff
 	   #:close-inotify
+
+	   ;;; inotify accessors
+	   #:inotify-fd
+	   #:inotify-stream
+	   #:inotify-nonblocking
 
 	   ;;; event parsing functions
 	   #:make-unregistered-inotify
 	   #:read-event-from-stream
 	   #:watch-raw
 	   #:unwatch-raw
+
+	   ;;; event accessors
+	   #:inotify-event-wd
+	   #:inotify-event-mask
+	   #:inotify-event-cookie
+	   #:inotify-event-name
 
 	   ;;; enhanced functionality
 	   #:make-inotify
@@ -59,5 +71,9 @@
 	   ;;; convenience functions
 	   #:list-watched
 	   #:do-events
-	   #:next-events)
+	   #:next-events
+
+	   ;;; macros
+	   #:with-inotify
+	   #:with-unregistered-inotify)
   (:documentation "A binding (not only?) for the LINUX inotify(7) API."))
