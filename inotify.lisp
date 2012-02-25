@@ -380,7 +380,7 @@ terminates if no events are available."
 
 ;;; this has the longer name, because this way you actually have to read
 ;;; about the differences, at least i hope so
-(defmacro with-unregistered-inotify ((&optional inotify (nonblocking T) &rest rest) &body body)
+(defmacro with-unregistered-inotify ((inotify &optional (nonblocking T) &rest rest) &body body)
   "Like WITH-INOTIFY, but uses MAKE-UNREGISTERED-INOTIFY and WATCH-RAW
 instead.  Useful if you need to monitor just a fixed set of paths."
   `(let* ((,inotify (make-unregistered-inotify ,nonblocking)))
@@ -392,7 +392,7 @@ instead.  Useful if you need to monitor just a fixed set of paths."
 	    ,.body)
        (close-inotify ,inotify))))
 
-(defmacro with-inotify ((&optional inotify (nonblocking T) &rest rest) &body body)
+(defmacro with-inotify ((inotify &optional (nonblocking T) &rest rest) &body body)
   "Executes BODY with a newly created queue bound to INOTIFY if true.
 See MAKE-INOTIFY for more information about possible arguments.
 
