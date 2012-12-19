@@ -75,5 +75,8 @@
 
 	   ;;; macros
 	   #:with-inotify
-	   #:with-unregistered-inotify)
+	   #:with-unregistered-inotify
+	   #:with-inotify-event-handler
+
+	   #:run-inotify-program)
   (:documentation "A binding (not only?) for the LINUX inotify(7) API."))

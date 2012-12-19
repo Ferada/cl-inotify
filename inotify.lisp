@@ -410,3 +410,93 @@ UNWATCH calls on all WATCHed paths."
                       rest)
             ,@body)
        (close-inotify ,inotify))))
+
+;; TODO: what about other implementations?
+#+sbcl
+(defmacro with-inotify-event-handler ((inotify
+                                       &optional (nonblocking T) (registered T)
+                                       &rest rest)
+                                      event-handler
+                                      &body body)
+  "Registers an INOTIFY queue and runs EVENT-HANDLER with it as only
+parameter whenever input happens while the BODY is executed.
+
+Other parameters are passed to WITH-(UNREGISTERED)-INOTIFY depending on the
+value of REGISTERED (default T)."
+  (let ((handle (gensym "HANDLE")))
+    `(,(if registered 'with-inotify 'with-unregistered-inotify)
+      (,inotify ,nonblocking ,@rest)
+      (sb-sys:with-fd-handler
+          ((inotify-fd ,inotify)
+           :input
+           (lambda (,handle)
+             (declare (ignore ,handle))
+             (funcall ,event-handler ,inotify)))
+          ,@body))))
+
+(defun run-inotify-program (program args rest directories flags
+                            &key function (wait T) event-handler (registered T))
+  "Runs a program and records all matched events in all DIRECTORIES using
+FLAGS.  If EVENT-HANDLER is set, it is instead called with every available
+event.
+
+PROGRAM, ARGS and REST are the arguments to SB-EXT:RUN-PROGRAM.  REST is
+passed on verbatim except for the WAIT parameter, which is set to false.
+
+PROGRAM may also be a FUNCTION, in which case it is called with
+\(ARGS . REST) as arguments and has to return a process object like from
+SB-EXT:RUN-PROGRAM.  The process also shouldn't be spawned with WAIT set.
+
+DIRECTORIES is a list of directory arguments for WATCH/-RAW.
+
+WAIT is only valid if FUNCTION is set.  If it is true, after FUNCTION has
+returned, we wait until the process has quit.
+
+On supported implementations (SBCL) the FUNCTION parameter may be used to
+do some work while the program is running and watched by the inotify queue.
+It is called with the process object and the inotify queue as arguments."
+  (let (events)
+    (labels ((run ()
+               (typecase program
+                 (function (apply program args rest))
+                 (T
+                  (apply #'sb-ext:run-program program args :wait NIL rest))))
+             (events (inotify)
+               (do-events (event inotify)
+                 (if event-handler
+                     (funcall event-handler event)
+                     (push event events))))
+             (body (inotify)
+               (unwind-protect
+                    (progn
+                      (let ((register (if registered #'watch #'watch-raw)))
+                        (mapcar (lambda (directory)
+                                  (funcall register inotify directory flags))
+                                directories))
+                      (let ((process (run)))
+                        (if function
+                            (unwind-protect
+                                 (funcall function process inotify)
+                              ;; wait in any case so catching the files will work
+                              (when wait
+                                (sb-ext:process-wait process)))
+                            (loop
+                              while (sb-ext:process-alive-p process)
+                              do (events inotify)
+                              finally (return (if event-handler
+                                                  process
+                                                  (values (nreverse events) process)))))))
+                 (close-inotify inotify))))
+      (let ((inotify (if registered (make-inotify) (make-unregistered-inotify))))
+        (if function
+            #-sbcl
+            (error "the FUNCTION parameter is only supported on SBCL for now")
+            #+sbcl
+            (sb-sys:with-fd-handler
+                ((inotify-fd inotify)
+                 :input
+                 (lambda (handle)
+                   (declare (ignore handle))
+                   (events inotify)))
+                (body inotify))
+            (body inotify))))))
