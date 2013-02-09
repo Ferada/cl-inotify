@@ -374,7 +374,9 @@ error."
 (defmacro do-events ((var inotify &key blocking-p) &body body)
   "Loops BODY with VAR bound to the next events retrieved from INOTIFY.
 The macro uses NEXT-EVENT, so reading an event won't block and the loop
-terminates if no events are available."
+terminates if no events are available.  If BLOCKING-P is set, the loop
+blocks if no events are available, otherwise it exits as soon as no
+events were encountered."
   (check-type var symbol)
   (let ((inotify-sym (gensym)))
    `(loop
@@ -396,7 +398,7 @@ terminates if no events are available."
 (defmacro with-unregistered-inotify ((inotify &optional (nonblocking T) &rest rest) &body body)
   "Like WITH-INOTIFY, but uses MAKE-UNREGISTERED-INOTIFY and WATCH-RAW
 instead.  Useful if you need to monitor just a fixed set of paths."
-  `(let* ((,inotify (make-unregistered-inotify ,nonblocking)))
+  `(let ((,inotify (make-unregistered-inotify ,nonblocking)))
      (unwind-protect
           (progn
             ,.(mapcar (lambda (specifier)
@@ -414,7 +416,7 @@ more forms (PATHNAME FLAGS &KEY (REPLACE-P T)).
 
 Since the QUEUE is closed on unwinding, this macro doesn't bother with
 UNWATCH calls on all WATCHed paths."
-  `(let* ((,inotify (make-inotify ,nonblocking)))
+  `(let ((,inotify (make-inotify ,nonblocking)))
      (unwind-protect
           (progn
             ,.(mapcar (lambda (specifier)
@@ -446,6 +448,7 @@ value of REGISTERED (default T)."
              (funcall ,event-handler ,inotify)))
           ,@body))))
 
+#+sbcl
 (defun run-inotify-program (program args rest directories flags
                             &key function (wait T) event-handler (registered T))
   "Runs a program and records all matched events in all DIRECTORIES using

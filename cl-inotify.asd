@@ -42,5 +42,5 @@
                #:osicat)
   :serial T
   :components ((:file "package")
-	       (cffi-grovel:grovel-file "grovel")
-	       (:file "inotify")))
+               (cffi-grovel:grovel-file "grovel")
+               (:file "inotify")))
