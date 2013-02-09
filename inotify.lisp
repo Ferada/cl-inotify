@@ -404,6 +404,7 @@ instead.  Useful if you need to monitor just a fixed set of paths."
             ,.(mapcar (lambda (specifier)
                         `(watch-raw ,inotify ,@specifier))
                       rest)
+            (values)
             ,@body)
        (close-inotify ,inotify))))
 
@@ -422,5 +423,6 @@ UNWATCH calls on all WATCHed paths."
             ,.(mapcar (lambda (specifier)
                         `(watch ,inotify ,@specifier))
                       rest)
+            (values)
             ,@body)
        (close-inotify ,inotify))))
