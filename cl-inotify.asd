@@ -36,7 +36,10 @@
   :long-description "Binding to the Linux inotify(7) API."
   :author "Olof-Joachim Frahm <olof@macrolet.net>"
   :license "Simplified BSD License"
-  :depends-on (#:cffi #:binary-types #:trivial-utf-8 #:sb-posix)
+  :depends-on (#:cffi
+               #:binary-types
+               #:trivial-utf-8
+               #:osicat)
   :serial T
   :components ((:file "package")
 	       (cffi-grovel:grovel-file "grovel")

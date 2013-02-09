@@ -30,6 +30,7 @@
 
 (defpackage cl-inotify
   (:use #:cl #:cffi)
+  (:import-from #:osicat-posix #:defsyscall)
   (:export ;;; used types for documentation
 	   #:inotify-add/read-flag
 	   #:inotify-read-flag

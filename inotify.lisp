@@ -94,16 +94,20 @@ thus should be used only with WATCH-RAW)."
   '(or (satisfies valid-watch-flag-p)
        (and list (satisfies valid-watch-flag-list-p))))
 
-(defcfun ("inotify_init" c-inotify-init) :int
+(defsyscall inotify-init :int
   "Initialises a new inotify event queue.")
 
-(defcfun ("inotify_add_watch" c-inotify-add-watch) :int
+(defsyscall inotify-init1 :int
+  "Initialises a new inotify event queue and passes some flags along."
+  (flags inotify1-flag))
+
+(defsyscall inotify-add-watch :int
   "Watches a path on a event queue."
   (fd :int)
   (pathname :string)
   (mask inotify-flag))
 
-(defcfun ("inotify_rm_watch" c-inotify-rm-watch) :int
+(defsyscall inotify-rm-watch :int
   "Removes a watched path from a event queue."
   (fd :int)
   (wd :int))
@@ -180,38 +184,48 @@ called when the library is loaded."
 
 (defun set-nonblocking (fd nonblocking)
   "Enables or disables NONBLOCKING mode on a file descriptor FD."
-  (let ((flags (sb-posix:fcntl fd sb-posix:f-getfl)))
+  (let ((flags (osicat-posix:fcntl fd osicat-posix:f-getfl)))
     ;; an error is raised if this fails, so we don't have to do it ourselves
-    (sb-posix:fcntl fd sb-posix:f-setfl
-                    (funcall (if nonblocking #'logior #'logxor)
-                             flags sb-posix:o-nonblock)))
+    (osicat-posix:fcntl fd osicat-posix:f-setfl
+                        (funcall (if nonblocking #'logior #'logxor)
+                                 flags osicat-posix:o-nonblock)))
   (values))
 
 (defun init-unregistered-inotify (inotify &optional (nonblocking T))
   "Creates a new inotify event queue.  If NONBLOCKING is set (default),
 the file descriptor is set to non-blocking I/O."
-  (let ((result (c-inotify-init)))
-    (when (minusp result)
-      (perror "inotify_init failed"))
-    (with-slots (fd stream (non-block nonblocking)) inotify
-      (unwind-protect
-           ;; file descriptor is collected with auto-close
-           (progn
-             (setf fd result)
-             (when nonblocking
-               (set-nonblocking fd T)
-               (setf non-block nonblocking))
-             (setf stream
-                   (sb-sys:make-fd-stream
-                    fd
-                    :input T
-                    :element-type '(unsigned-byte 8)
-                    :name (format NIL "inotify event queue ~A" fd)
-                    :auto-close T
-                    :buffering (if nonblocking :none :full))))
-        ;; if stream is constructed, gc'ing it will cleanup the file descriptor
-        (unless stream
-          (sb-posix:close fd)))))
+  (with-slots (fd stream (non-block nonblocking)) inotify
+    (unwind-protect
+         ;; file descriptor is collected with auto-close
+         (progn
+           (setf fd (inotify-init1 (and (setf non-block nonblocking)
+                                        :nonblock)))
+           (setf stream
+                 ;; TODO: what about the blocking?
+                 #-(or clisp sbcl)
+                 (osicat::make-fd-stream
+                  fd
+                  :direction :input
+                  :element-type '(unsigned-byte 8))
+                 #+clisp
+                 (ext:make-stream
+                  fd
+                  :direction :input
+                  :element-type '(unsigned-byte 8)
+                  :buffered (not nonblocking))
+                 #+sbcl
+                 (sb-sys:make-fd-stream
+                  fd
+                  :input T
+                  :element-type '(unsigned-byte 8)
+                  :name (format NIL "inotify event queue ~A" fd)
+                  :auto-close T
+                  :buffering (if nonblocking :none :full))))
+      ;; if stream is constructed, gc'ing it will cleanup the file descriptor
+      ;; TODO: is this true for clisp?  because the docs say that
+      ;; EXT:MAKE-STREAM uses dup(2)
+      (unless stream
+        (osicat-posix:close fd))))
   inotify)
 
 (defun make-unregistered-inotify (&optional (nonblocking T))
@@ -222,10 +236,6 @@ the file descriptor is set to non-blocking I/O."
   "Closes the inotify event queue."
   (close (inotify-stream inotify))
   (values))
-
-(defun perror (prefix-string)
-  #+sbcl (sb-int:simple-perror prefix-string)
-  #-(or sbcl) (error prefix-string))
 
 (defun ensure-list (arg)
   (if (listp arg) arg `(,arg)))
@@ -243,18 +253,13 @@ be of type LIST, KEYWORD or a raw numerical value (which isn't checked
 for validity though).  Returns a handle which can be used with UNWATCH-RAW."
   (let* ((path (etypecase pathname
                  (string pathname)
-                 (pathname (namestring pathname))))
-         (result (c-inotify-add-watch (inotify-fd inotify)
-                                      path (translate-keyword-flags flags))))
-    (when (minusp result)
-      (perror "inotify_add_watch failed"))
-    result))
+                 (pathname (namestring pathname)))))
+    (inotify-add-watch (inotify-fd inotify)
+                       path (translate-keyword-flags flags))))
 
 (defun unwatch-raw (inotify handle)
   "Stops watching the path associated with a HANDLE established by WATCH-RAW."
-  (let ((result (c-inotify-rm-watch (inotify-fd inotify) handle)))
-    (when (minusp result)
-      (perror "inotify_rm_watch failed")))
+  (inotify-rm-watch (inotify-fd inotify) handle)
   (values))
 
 ;;;; support functions, making life easier
@@ -340,18 +345,21 @@ may be one from a given EVENT) or PATHNAME."
     for pathname being each hash-key in (inotify-watched inotify)
     collect pathname))
 
-(defun unix-eagain-p (fd-stream)
-  "Returns T on a FD-STREAM if trying to read from the stream raised a
-EAGAIN error."
-  (multiple-value-bind (result error)
-      (sb-unix:unix-read (sb-sys:fd-stream-fd fd-stream) NIL 0)
-    (declare (ignore result))
-    (= error sb-unix:eagain)))
+(defun unix-eagain-p (fd)
+  "Returns T on a file descriptor if trying to read raised an EAGAIN
+error."
+  (handler-case (prog1 NIL (osicat-posix:read fd (null-pointer) 0))
+    ;; we have to check for both to be portable, says read(2)
+    (osicat-posix:eagain () T)
+    (osicat-posix:ewouldblock () T)
+    ;; this is set if the kernel is newer than 2.6.21 if the buffer is
+    ;; too small to get the next event (which it certainly is)
+    (osicat-posix:einval () NIL)))
 
 (defun event-available-p (inotify)
   "Returns T if an event is available on the queue."
   (if (inotify-nonblocking inotify)
-      (not (unix-eagain-p (inotify-stream inotify)))
+      (not (unix-eagain-p (inotify-fd inotify)))
       (listen (inotify-stream inotify))))
 
 (defun read-event (inotify)
