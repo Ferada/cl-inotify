@@ -29,7 +29,8 @@ Macros make keeping track easier, so the following example is
 straightforward:
 
     > (with-inotify (inotify T ("." :all-events))
-    >   (loop (format T "~{~A~%~}" (next-events inotify))))
+    >   (do-events (event inotify :blocking-p T)
+    >     (format T "~A~%" event)))
     > =>
     > #S(CL-INOTIFY::INOTIFY-EVENT :WD 1 :MASK (CREATE) :COOKIE 0 :NAME .zshist.LOCK)
     > #S(CL-INOTIFY::INOTIFY-EVENT :WD 1 :MASK (OPEN) :COOKIE 0 :NAME .zshist)
