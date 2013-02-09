@@ -187,6 +187,9 @@ only adds the `WATCHED` slot under the same `CONC-NAME`.
   fd-streams everywhere, or skip them entirely)
 - (maybe) don't use the libc for this, direct syscall
 - (maybe) add iolib replacement for io functions
+- the nonblocking mode is pretty useless, because for one the READ
+  functions still block and also LISTEN seems to work just fine and it's
+  not even needed for multiplexing, so why keep this in?
 
 [1]: https://github.com/Ferada/binary-types
 [2]: http://www.cliki.net/Binary-types
