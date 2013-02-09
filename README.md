@@ -119,23 +119,24 @@ In case you want to use `epoll` or `select` on the event queue you can
 access the file descriptor yourself and then use the normal functions
 afterwards.  Currently no such functionality is integrated here, however
 the following sketch shows how something can be accomplished using
-implementation-specific and -internal functionality (since I couldn't
-yet get iolib to build again on my system).  So, given SBCL, we register
-ourselves for event notification on the inotify file descriptor:
+iolib:
 
-    > (with-unregistered-inotify (inotify T ("." :all-events))
-    >   (flet ((inotify-input (handler)
-    >            (declare (ignore handler))
-    >            (format T "~{~A~%~}" (next-events inotify))))
-    >     (sb-sys:with-fd-handler ((inotify-fd inotify) :input #'inotify-input)
-    >       (loop (sb-sys:serve-all-events 1)))))
+    (with-unregistered-inotify (inotify T ("." :all-events))
+      (flet ((inotify-input (&rest rest)
+               (declare (ignore rest))
+               (format T "~{~A~%~}" (next-events inotify))))
+        (iolib:with-event-base (event-base)
+          (iolib:set-io-handler event-base (inotify-fd inotify) :read #'inotify-input)
+          (iolib:event-dispatch event-base))))
 
 Note that we perform all inotify business only when something happens in
-that directory, so instead of that loop we could actually do useful
+that directory, so instead of doing nothing, we could actually do useful
 work, e.g. communicating with a process:  This snippet was extracted
 from a function which uses behaviour to monitor a LaTeX process for
 written files to get the output file name without relying on heuristics
-about the generated filename.
+about the generated filename.  As it stands you have to split this into
+threads, or use `IOLIB:EVENT-DISPATCH` with a timeout while periodically
+checking the process status.
 
 
 # REFERENCE
@@ -181,12 +182,10 @@ only adds the `WATCHED` slot under the same `CONC-NAME`.
 
 - more functionality to examine read events
 - extend to other APIs?
-- make things more implementation independent
+- make things more implementation independent (partly done, still needs
+  fd-streams everywhere, or skip them entirely)
 - (maybe) don't use the libc for this, direct syscall
 - (maybe) add iolib replacement for io functions
-- easier interface for (e)poll/select maybe using iolib (done partly
-  using CL:LISTEN and/or SB-UNIX:UNIX-READ)
-- add some cleanup handler to close queue on garbage collection
 
 [1]: https://github.com/Ferada/binary-types
 [2]: http://www.cliki.net/Binary-types
