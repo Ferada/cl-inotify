@@ -30,6 +30,8 @@
 
 (include "sys/inotify.h")
 
+(constant (in-cloexec       "IN_CLOEXEC"))
+(constant (in-nonblock      "IN_NONBLOCK"))
 (constant (in-access        "IN_ACCESS"))
 (constant (in-modify        "IN_MODIFY"))
 (constant (in-attrib        "IN_ATTRIB"))

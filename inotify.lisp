@@ -28,6 +28,10 @@
 
 (in-package #:cl-inotify)
 
+(defbitfield (inotify1-flag :int)
+  (:cloexec       #.in-cloexec)
+  (:nonblock      #.in-nonblock))
+
 (defbitfield (inotify-flag :uint32)
   (:access        #.in-access)
   (:modify        #.in-modify)
