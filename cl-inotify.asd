@@ -40,6 +40,7 @@
                #:binary-types
                #:trivial-utf-8
                #:osicat)
+  :weakly-depends-on (#:iolib)
   :serial T
   :components ((:file "package")
                (cffi-grovel:grovel-file "grovel")
