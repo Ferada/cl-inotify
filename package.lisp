@@ -32,49 +32,49 @@
   (:use #:cl #:cffi)
   (:import-from #:osicat-posix #:defsyscall)
   (:export ;;; used types for documentation
-	   #:inotify-add/read-flag
-	   #:inotify-read-flag
-	   #:inotify-add-flag
+           #:inotify-add/read-flag
+           #:inotify-read-flag
+           #:inotify-add-flag
 
-	   ;;; very raw
-	   #:read-raw-event-from-stream
+           ;;; very raw
+           #:read-raw-event-from-stream
 
-	   ;;; basic stuff
-	   #:close-inotify
+           ;;; basic stuff
+           #:close-inotify
 
-	   ;;; inotify accessors
-	   #:inotify-fd
-	   #:inotify-stream
-	   #:inotify-nonblocking
+           ;;; inotify accessors
+           #:inotify-fd
+           #:inotify-stream
+           #:inotify-nonblocking
 
-	   ;;; event parsing functions
-	   #:make-unregistered-inotify
-	   #:read-event-from-stream
-	   #:watch-raw
-	   #:unwatch-raw
+           ;;; event parsing functions
+           #:make-unregistered-inotify
+           #:read-event-from-stream
+           #:watch-raw
+           #:unwatch-raw
 
-	   ;;; event accessors
-	   #:inotify-event-wd
-	   #:inotify-event-mask
-	   #:inotify-event-cookie
-	   #:inotify-event-name
+           ;;; event accessors
+           #:inotify-event-wd
+           #:inotify-event-mask
+           #:inotify-event-cookie
+           #:inotify-event-name
 
-	   ;;; enhanced functionality
-	   #:make-inotify
-	   #:pathname-handle/flags
-	   #:event-pathname/flags
-	   #:watch
-	   #:unwatch
-	   #:event-availablep
-	   #:read-event
-	   #:next-event
+           ;;; enhanced functionality
+           #:make-inotify
+           #:pathname-handle/flags
+           #:event-pathname/flags
+           #:watch
+           #:unwatch
+           #:event-availablep
+           #:read-event
+           #:next-event
 
-	   ;;; convenience functions
-	   #:list-watched
-	   #:do-events
-	   #:next-events
+           ;;; convenience functions
+           #:list-watched
+           #:do-events
+           #:next-events
 
-	   ;;; macros
-	   #:with-inotify
-	   #:with-unregistered-inotify)
+           ;;; macros
+           #:with-inotify
+           #:with-unregistered-inotify)
   (:documentation "A binding (not only?) for the LINUX inotify(7) API."))
