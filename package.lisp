@@ -1,4 +1,4 @@
-;;; -*- mode: lisp; syntax: common-lisp; coding: utf-8; package: cl-user; -*-
+;;; -*- mode: lisp; syntax: common-lisp; coding: utf-8-unix; package: cl-user; -*-
 
 ;; Copyright (c) 2011-12, Olof-Joachim Frahm
 ;; All rights reserved.

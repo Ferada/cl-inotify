@@ -1,4 +1,4 @@
-;;; -*- mode: lisp; syntax: common-lisp; coding: utf-8; package: cl-inotify; -*-
+;;; -*- mode: lisp; syntax: common-lisp; coding: utf-8-unix; package: cl-inotify; -*-
 
 ;; Copyright (c) 2011, Olof-Joachim Frahm
 ;; All rights reserved.
