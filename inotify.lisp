@@ -102,13 +102,13 @@ thus should be used only with WATCH-RAW)."
   (flags inotify1-flag))
 
 (defsyscall inotify-add-watch :int
-  "Watches a path on a event queue."
+  "Watches a path on an event queue."
   (fd :int)
   (pathname :string)
   (mask inotify-flag))
 
 (defsyscall inotify-rm-watch :int
-  "Removes a watched path from a event queue."
+  "Removes a watched path from an event queue."
   (fd :int)
   (wd :int))
 
