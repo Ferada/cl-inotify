@@ -30,6 +30,7 @@
 
 (include "sys/inotify.h")
 
+;; since 2.6.27 according to inotify_init(2)
 (constant (in-cloexec       "IN_CLOEXEC"))
 (constant (in-nonblock      "IN_NONBLOCK"))
 (constant (in-access        "IN_ACCESS"))

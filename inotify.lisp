@@ -28,6 +28,11 @@
 
 (in-package #:cl-inotify)
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (when (boundp 'in-cloexec)
+    (pushnew 'inotify1 *features*)))
+
+#+cl-inotify::inotify1
 (defbitfield (inotify1-flag :int)
   (:cloexec       #.in-cloexec)
   (:nonblock      #.in-nonblock))
@@ -97,6 +102,7 @@ thus should be used only with WATCH-RAW)."
 (defsyscall inotify-init :int
   "Initialises a new inotify event queue.")
 
+#+cl-inotify::inotify1
 (defsyscall inotify-init1 :int
   "Initialises a new inotify event queue and passes some flags along."
   (flags inotify1-flag))
@@ -198,8 +204,14 @@ the file descriptor is set to non-blocking I/O."
     (unwind-protect
          ;; file descriptor is collected with auto-close
          (progn
-           (setf fd (inotify-init1 (and (setf non-block nonblocking)
-                                        :nonblock)))
+           (setf non-block nonblocking)
+           #+inotify1
+           (setf fd (inotify-init1 (and non-block :nonblock)))
+           #-inotify1
+           (setf fd (inotify-init))
+           #-inotify1
+           (when non-block
+             (set-nonblocking fd T))
            (setf stream
                  ;; TODO: what about the blocking?
                  #-(or clisp sbcl)
