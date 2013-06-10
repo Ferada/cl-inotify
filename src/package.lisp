@@ -28,35 +28,53 @@
 
 (in-package #:cl-user)
 
-(eval-when (:load-toplevel :execute)
-  (asdf:operate 'asdf:load-op 'cffi-grovel))
+(defpackage #:cl-inotify
+  (:use #:cl #:cffi)
+  (:import-from #:osicat-posix #:defsyscall)
+  (:export ;;; used types for documentation
+           #:inotify-add/read-flag
+           #:inotify-read-flag
+           #:inotify-add-flag
 
-(asdf:defsystem #:cl-inotify
-  :description "Inotify binding."
-  :long-description "Binding to the Linux inotify(7) API."
-  :author "Olof-Joachim Frahm <olof@macrolet.net>"
-  :license "Simplified BSD License"
-  :depends-on (#:cffi
-               #:binary-types
-               #:trivial-utf-8
-               #:osicat)
-  :weakly-depends-on (#:iolib)
-  :in-order-to ((asdf:test-op (asdf:load-op #:cl-inotify-tests)))
-  :perform (asdf:test-op :after (op c)
-             (funcall (find-symbol (symbol-name '#:run!) '#:fiveam)
-                      (find-symbol (symbol-name '#:cl-inotify) '#:cl-inotify-tests)))
-  :serial T
-  :components ((:module "src"
-                :components
-                ((:file "package")
-                 (cffi-grovel:grovel-file "grovel")
-                 (:file "inotify")))))
+           ;;; very raw
+           #:read-raw-event-from-stream
 
-(asdf:defsystem #:cl-inotify-tests
-  :depends-on (#:cl-inotify #:fiveam)
-  :serial T
-  :components ((:module "tests"
-                :components
-                ((:file "package")
-                 (:file "suite")
-                 (:file "inotify")))))
+           ;;; basic stuff
+           #:close-inotify
+
+           ;;; inotify accessors
+           #:inotify-fd
+           #:inotify-stream
+           #:inotify-nonblocking
+
+           ;;; event parsing functions
+           #:make-unregistered-inotify
+           #:read-event-from-stream
+           #:watch-raw
+           #:unwatch-raw
+
+           ;;; event accessors
+           #:inotify-event-wd
+           #:inotify-event-mask
+           #:inotify-event-cookie
+           #:inotify-event-name
+
+           ;;; enhanced functionality
+           #:make-inotify
+           #:pathname-handle/flags
+           #:event-pathname/flags
+           #:watch
+           #:unwatch
+           #:event-availablep
+           #:read-event
+           #:next-event
+
+           ;;; convenience functions
+           #:list-watched
+           #:do-events
+           #:next-events
+
+           ;;; macros
+           #:with-inotify
+           #:with-unregistered-inotify)
+  (:documentation "Binding to the Linux inotify(7) API."))

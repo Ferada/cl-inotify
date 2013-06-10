@@ -1,4 +1,4 @@
-CL-INOTIFY - Interface to the Linux inotify(7) API.
+CL-INOTIFY - Binding to the Linux inotify(7) API.
 
 Copyright (C) 2011-12 Olof-Joachim Frahm
 
@@ -9,10 +9,10 @@ Working, but unfinished.
 Implementations currently running on: SBCL.
 
 Uses CFFI, binary-types (from [my Github][1] or see [CLiki][2]) and
-trivial-utf-8.  Doesn't use iolib, because I don't need most of the
+trivial-utf-8.  Doesn't require iolib, because I don't need most of the
 functionality, although it might gain us some implementation
 independence (patches which can be conditionally compiled are most
-welcome; in any case patches are welcome).
+welcome; in any case patches are welcome).  The tests require fiveam.
 
 A similar package is at [stassats Github][3].
 
