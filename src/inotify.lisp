@@ -83,9 +83,9 @@
     (member :dont-follow :mask-add :oneshot :onlydir)))
 
 (defun valid-watch-flag-p (x)
-  (and (typep x 'inotify-add-flag)
-       (not (eq :mask-add x))
-       (not (eq :oneshot x))))
+  (or (typep x 'inotify-read-flag)
+      (eq :dont-follow x)
+      (eq :onlydir x)))
 
 (defun valid-watch-flag-list-p (list)
   (every #'valid-watch-flag-p list))
