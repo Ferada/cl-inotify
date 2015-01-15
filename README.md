@@ -92,7 +92,7 @@ rely on that) which can be fed to `UNWATCH` and can be translated from
 events with `EVENT-PATHNAME/FLAGS`.
 
 To finally get the events from the queue, use `READ-EVENT` (which
-blocks) or `NEXT-EVENT` (which doesn't block).  `EVENT-AVAILABLEP` does
+blocks) or `NEXT-EVENT` (which doesn't block).  `EVENT-AVAILABLE-P` does
 what it should do, `NEXT-EVENTS` retrieves all currently available
 events as a list and `DO-EVENTS` (nonblocking) iterates over available
 events.

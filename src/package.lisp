@@ -65,7 +65,7 @@
            #:event-pathname/flags
            #:watch
            #:unwatch
-           #:event-availablep
+           #:event-available-p
            #:read-event
            #:next-event
 
