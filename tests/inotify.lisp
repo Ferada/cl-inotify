@@ -29,3 +29,22 @@
 (in-package #:cl-inotify-tests)
 
 (in-suite cl-inotify)
+
+;; note that for all of these tests other programs might interfere, so
+;; they might fail for no apparent reason
+
+(def-test read-raw-event-from-stream.1 ()
+  (let ((tmp (osicat-posix:mkdtemp
+              (concatenate 'string
+                           (namestring osicat:*temporary-directory*)
+                           "cl-inotify-XXXXXX"))))
+    (with-unregistered-inotify (inotify T (tmp :all-events))
+      (ensure-directories-exist (concatenate 'string tmp "/foo/"))
+      (unwind-protect
+           (let ((available (event-available-p inotify)))
+             (is-true available "No event was read")
+             (when available
+               (let ((event (read-raw-event-from-stream (inotify-stream inotify))))
+                 (is-true event "No event was read")
+                 (is (equal "foo" (inotify-event-name event))))))
+        (osicat:delete-directory-and-files tmp)))))
