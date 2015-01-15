@@ -10,11 +10,11 @@ Implementations currently running on: SBCL.
 
 Uses CFFI, binary-types (from [my Github][1] or see [CLiki][2]) and
 trivial-utf-8.  Doesn't require iolib, because I don't need most of the
-functionality, although it might gain us some implementation
-independence (patches which can be conditionally compiled are most
-welcome; in any case patches are welcome).  The tests require fiveam.
+functionality, although it might add some implementation independence
+(patches which can be conditionally compiled are most welcome; in any
+case patches are always welcome).  The tests require fiveam.
 
-A similar package is at [stassats Github][3].
+Similar packages are [inotify][3] and [cl-fsnotify][4].
 
 This document helps only with the aspects of this binding, so reading
 the man-page and other information on the inotify-facility may be
@@ -105,7 +105,7 @@ read event.
 
 `UNWATCH` has to be called with the path or the handle of the watched
 file or directory (a path will be looked up in the same table as with
-`PATHNAME-HANDLE/FLAGS`). 
+`PATHNAME-HANDLE/FLAGS`).
 
 
 The raw API, which doesn't register watched paths, consists of
@@ -194,3 +194,4 @@ only adds the `WATCHED` slot under the same `CONC-NAME`.
 [1]: https://github.com/Ferada/binary-types
 [2]: http://www.cliki.net/Binary-types
 [3]: https://github.com/stassats/inotify
+[4]: https://github.com/howeyc/cl-fsnotify
