@@ -1,6 +1,6 @@
-;;; -*- mode: lisp; syntax: common-lisp; coding: utf-8-unix; package: cl-user; -*-
+;; -*- mode: lisp; syntax: common-lisp; coding: utf-8-unix; package: cl-user; -*-
 
-;; Copyright (c) 2011-12, Olof-Joachim Frahm
+;; Copyright (c) 2011-15, Olof-Joachim Frahm
 ;; All rights reserved.
 
 ;; Redistribution and use in source and binary forms, with or without
@@ -25,7 +25,7 @@
 ;; THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 ;; (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
+
 (in-package #:cl-user)
 
 (eval-when (:load-toplevel :execute)
@@ -50,13 +50,4 @@
                 :components
                 ((:file "package")
                  (cffi-grovel:grovel-file "grovel")
-                 (:file "inotify")))))
-
-(asdf:defsystem #:cl-inotify-tests
-  :depends-on (#:cl-inotify #:fiveam)
-  :serial T
-  :components ((:module "tests"
-                :components
-                ((:file "package")
-                 (:file "suite")
                  (:file "inotify")))))

@@ -1,6 +1,6 @@
-;;; -*- mode: lisp; syntax: common-lisp; coding: utf-8-unix; package: cl-inotify; -*-
+;; -*- mode: lisp; syntax: common-lisp; coding: utf-8-unix; package: cl-inotify; -*-
 
-;; Copyright (c) 2011, Olof-Joachim Frahm
+;; Copyright (c) 2011-2015, Olof-Joachim Frahm
 ;; All rights reserved.
 
 ;; Redistribution and use in source and binary forms, with or without
@@ -27,7 +27,7 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (in-package #:cl-inotify)
-
+
 (include "sys/inotify.h")
 
 ;; since 2.6.27 according to inotify_init(2)

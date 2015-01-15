@@ -1,6 +1,6 @@
-;;; -*- mode: lisp; syntax: common-lisp; coding: utf-8-unix; package: cl-user; -*-
+;; -*- mode: lisp; syntax: common-lisp; coding: utf-8-unix; package: cl-user; -*-
 
-;; Copyright (c) 2011-13, Olof-Joachim Frahm
+;; Copyright (c) 2011-15, Olof-Joachim Frahm
 ;; All rights reserved.
 
 ;; Redistribution and use in source and binary forms, with or without
@@ -27,6 +27,6 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (in-package #:cl-user)
-
+
 (defpackage #:cl-inotify-tests
   (:use #:cl #:cl-inotify #:fiveam))

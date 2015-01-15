@@ -1,6 +1,6 @@
 CL-INOTIFY - Binding to the Linux inotify(7) API.
 
-Copyright (C) 2011-13 Olof-Joachim Frahm
+Copyright (C) 2011-15 Olof-Joachim Frahm
 
 Released under a Simplified BSD license.
 
