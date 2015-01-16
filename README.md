@@ -6,7 +6,7 @@ Released under a Simplified BSD license.
 
 Working, but unfinished.
 
-Implementations currently running on: SBCL.
+[![Build Status](https://travis-ci.org/Ferada/cl-inotify.svg?branch=master)](https://travis-ci.org/Ferada/cl-inotify)
 
 Uses CFFI, binary-types (from [my Github][1] or see [CLiki][2]) and
 trivial-utf-8.  Doesn't require iolib, because I don't need most of the
