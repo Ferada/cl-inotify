@@ -341,14 +341,15 @@ may be one from a given EVENT) or PATHNAME."
     (error "either PATHNAME, EVENT or HANDLE have to be specified"))
   (when event
     (setf handle (slot-value event 'wd)))
-  (if handle
-      (unwatch-raw inotify handle)
-      (let ((handle (car (pathname-handle/flags inotify pathname))))
-        (unless handle
-          (error "PATHNAME ~S isn't being watched" pathname))
-        ;; remove even if unwatch-raw throws an error (which can happen if :oneshot is specified)
-        (remhash pathname (inotify-watched inotify))
-        (unwatch-raw inotify handle)))
+  (let ((handle (or handle
+                    (car (pathname-handle/flags inotify pathname))
+                    (error "PATHNAME ~S isn't being watched" pathname)))
+        (pathname (or pathname
+                      (event-pathname/flags inotify NIL handle)
+                      (error "No PATHNAME found for HANDLE ~S" handle))))
+    ;; remove even if unwatch-raw throws an error (which can happen if :oneshot is specified)
+    (remhash pathname (inotify-watched inotify))
+    (unwatch-raw inotify handle))
   (values))
 
 (defun list-watched (inotify)

@@ -48,3 +48,40 @@
                  (is-true event "No event was read")
                  (is (equal "foo" (inotify-event-name event))))))
         (osicat:delete-directory-and-files tmp)))))
+
+(def-test watch.recorded ()
+  "A single watch is recorded and the returned handle is valid."
+  (with-inotify (inotify)
+    (is (null (list-watched inotify)))
+    (is (integerp (watch inotify #P"." :all-events)))
+    (is (equal '(#P".") (list-watched inotify)))))
+
+(def-test unwatch.pathname ()
+  "Unwatching by pathname works."
+  (with-inotify (inotify)
+    (is (null (list-watched inotify)))
+    (watch inotify #P"." :all-events)
+    (is (not (null (list-watched inotify))))
+    (unwatch inotify :pathname #P".")
+    (is (null (list-watched inotify)))))
+
+(def-test unwatch.handle ()
+  "Unwatching by handle works."
+  (with-inotify (inotify)
+    (is (null (list-watched inotify)))
+    (let ((handle (watch inotify #P"." :all-events)))
+      (is (not (null (list-watched inotify))))
+      (unwatch inotify :handle handle))
+    (is (null (list-watched inotify)))))
+
+(def-test unwatch.no-arguments ()
+  "Unwatching needs exactly one of three keywords."
+  (with-inotify (inotify)
+    (signals error
+      (unwatch inotify))))
+
+(def-test unwatch.two-arguments ()
+  "Unwatching needs exactly one of three keywords."
+  (with-inotify (inotify)
+    (signals error
+      (unwatch inotify :pathname #P"." :handle 42))))
