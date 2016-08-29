@@ -175,10 +175,9 @@ called when the library is loaded."
   (let* ((event (binary-types:read-binary 'inotify-event stream))
          (len (binary-types:read-binary 'binary-types:u32 stream)))
     (when (plusp len)
-      (with-slots (name) event
-        (let ((buffer (make-array len :element-type '(unsigned-byte 8))))
-          (read-sequence buffer stream :end len)
-          (setf name (trivial-utf-8:utf-8-bytes-to-string buffer :end (position 0 buffer))))))
+      (let ((buffer (make-array len :element-type '(unsigned-byte 8))))
+        (read-sequence buffer stream :end len)
+        (setf (inotify-event-name event) (trivial-utf-8:utf-8-bytes-to-string buffer :end (position 0 buffer)))))
     event))
 
 (defun read-event-from-stream (stream)
@@ -282,7 +281,8 @@ for validity though).  Returns a handle which can be used with UNWATCH-RAW."
              (:conc-name inotify-))
   "Additionally to the information in INOTIFY-INSTANCE, records watched
 paths in a dictionary."
-  watched)
+  pathnames
+  handles)
 
 (defun make-inotify (&optional (nonblocking T))
   "Creates a new registered INOTIFY instance.  In NONBLOCKING mode, the file
@@ -290,23 +290,20 @@ descriptor is set to non-blocking mode.  The resulting object has to be
 closed with CLOSE-INOTIFY."
   (let ((result (make-registered-inotify-instance)))
     (init-unregistered-inotify result nonblocking)
-    (with-slots (watched) result
-      (setf watched (make-hash-table :test 'equal)))
+    (setf (inotify-pathnames result) (make-hash-table :test 'equal)
+          (inotify-handles result) (make-hash-table))
     result))
 
 (defun pathname-handle/flags (inotify pathname)
   "Returns a CONS cell with the values HANDLE and FLAGS if PATHNAME is
 being watched by INOTIFY, else NIL.  The match is exact."
-  (gethash pathname (inotify-watched inotify)))
+  (gethash pathname (inotify-pathnames inotify)))
 
 (defun event-pathname/flags (inotify event &optional (handle (slot-value event 'wd)))
   "Returns two values PATHNAME and FLAGS for an EVENT which were used during
 registration.  If HANDLE is specified EVENT is ignored."
-  (block NIL
-    (maphash (lambda (pathname entry)
-               (when (eql (car entry) handle)
-                 (return (values pathname (cdr entry)))))
-             (inotify-watched inotify))))
+  (let ((cons (gethash handle (slot-value inotify 'handles))))
+    (and cons (values (car cons) (cdr cons)))))
 
 (defun sane-user-flags (inotify pathname flags &key (replace-p T))
   (check-type flags watch-flag-list)
@@ -316,7 +313,7 @@ registration.  If HANDLE is specified EVENT is ignored."
          (rep-flags (if replace-p
                         (cons :mask-add flags)
                         flags)))
-    (let ((it (gethash pathname (slot-value inotify 'watched))))
+    (let ((it (gethash pathname (inotify-pathnames inotify))))
       (if it
           (union (cdr it) rep-flags :test #'eq)
           rep-flags))))
@@ -329,9 +326,10 @@ with UNWATCH and EVENT-PATHNAME/FLAGS.  If REPLACE-P is set to T (default),
 the flags mask is replaced rather than OR-ed to the current mask (if it
 exists).  The :MASK-ADD flag is therefore removed from the FLAGS argument."
   (let* ((flags (sane-user-flags inotify pathname flags :replace-p replace-p))
-         (handle (watch-raw inotify pathname flags)))
-    (with-slots (watched) inotify
-      (setf (gethash pathname watched) (cons handle flags)))
+         (handle (watch-raw inotify pathname flags))
+         (cons (cons handle flags)))
+    (setf (gethash pathname (inotify-pathnames inotify)) cons
+          (gethash handle (inotify-handles inotify)) cons)
     handle))
 
 (defun unwatch (inotify &key pathname event handle)
@@ -348,14 +346,15 @@ may be one from a given EVENT) or PATHNAME."
                       (event-pathname/flags inotify NIL handle)
                       (error "No PATHNAME found for HANDLE ~S" handle))))
     ;; remove even if unwatch-raw throws an error (which can happen if :oneshot is specified)
-    (remhash pathname (inotify-watched inotify))
+    (remhash pathname (inotify-pathnames inotify))
+    (remhash handle (inotify-handles inotify))
     (unwatch-raw inotify handle))
   (values))
 
 (defun list-watched (inotify)
   "Returns a LIST of all watched pathnames in no particular order."
   (loop
-    for pathname being each hash-key in (inotify-watched inotify)
+    for pathname being each hash-key in (inotify-pathnames inotify)
     collect pathname))
 
 (defun unix-eagain-p (fd)
