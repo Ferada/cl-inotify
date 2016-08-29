@@ -25,29 +25,8 @@
 ;; THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 ;; (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
+
 (in-package #:cl-user)
-
-(eval-when (:load-toplevel :execute)
-  (asdf:operate 'asdf:load-op 'cffi-grovel))
-
-(asdf:defsystem #:cl-inotify
-  :description "Inotify binding."
-  :long-description "Binding to the Linux inotify(7) API."
-  :author "Olof-Joachim Frahm <olof@macrolet.net>"
-  :license "Simplified BSD License"
-  :depends-on (#:cffi
-               #:binary-types
-               #:trivial-utf-8
-               #:osicat)
-  :weakly-depends-on (#:iolib)
-  :in-order-to ((asdf:test-op (asdf:load-op #:cl-inotify-tests)))
-  :perform (asdf:test-op :after (op c)
-             (funcall (find-symbol (symbol-name '#:run!) '#:fiveam)
-                      (find-symbol (symbol-name '#:cl-inotify) '#:cl-inotify-tests)))
-  :serial T
-  :components ((:module "src"
-                :components
-                ((:file "package")
-                 (cffi-grovel:grovel-file "grovel")
-                 (:file "inotify")))))
+
+(defpackage #:cl-inotify-tests
+  (:use #:cl #:cl-inotify #:fiveam))

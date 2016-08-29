@@ -1,6 +1,6 @@
-;;; -*- mode: lisp; syntax: common-lisp; coding: utf-8-unix; package: cl-user; -*-
+;; -*- mode: lisp; syntax: common-lisp; coding: utf-8-unix; package: cl-user; -*-
 
-;; Copyright (c) 2011-12, Olof-Joachim Frahm
+;; Copyright (c) 2011-15, Olof-Joachim Frahm
 ;; All rights reserved.
 
 ;; Redistribution and use in source and binary forms, with or without
@@ -27,8 +27,8 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (in-package #:cl-user)
-
-(defpackage cl-inotify
+
+(defpackage #:cl-inotify
   (:use #:cl #:cffi)
   (:import-from #:osicat-posix #:defsyscall)
   (:export ;;; used types for documentation
@@ -65,7 +65,7 @@
            #:event-pathname/flags
            #:watch
            #:unwatch
-           #:event-availablep
+           #:event-available-p
            #:read-event
            #:next-event
 
@@ -77,4 +77,4 @@
            ;;; macros
            #:with-inotify
            #:with-unregistered-inotify)
-  (:documentation "A binding (not only?) for the LINUX inotify(7) API."))
+  (:documentation "Binding to the Linux inotify(7) API."))
