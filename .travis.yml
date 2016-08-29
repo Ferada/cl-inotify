@@ -1,5 +1,7 @@
 language: lisp
 
+sudo: required
+
 env:
   matrix:
     - LISP=abcl
@@ -19,7 +21,7 @@ matrix:
     - env: LISP=cmucl
 
 install:
-  - curl https://raw.githubusercontent.com/luismbo/cl-travis/master/install.sh | sh
+  - curl -L https://github.com/luismbo/cl-travis/raw/master/install.sh | sh
 
 script:
   # work around fiveam
