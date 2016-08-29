@@ -297,13 +297,14 @@ closed with CLOSE-INOTIFY."
 (defun pathname-handle/flags (inotify pathname)
   "Returns a CONS cell with the values HANDLE and FLAGS if PATHNAME is
 being watched by INOTIFY, else NIL.  The match is exact."
-  (gethash pathname (inotify-pathnames inotify)))
+  (cdr (gethash pathname (inotify-pathnames inotify))))
 
 (defun event-pathname/flags (inotify event &optional (handle (slot-value event 'wd)))
   "Returns two values PATHNAME and FLAGS for an EVENT which were used during
 registration.  If HANDLE is specified EVENT is ignored."
-  (let ((cons (gethash handle (slot-value inotify 'handles))))
-    (and cons (values (car cons) (cdr cons)))))
+  (let ((list (gethash handle (inotify-handles inotify))))
+    (when list
+      (values (first list) (third list)))))
 
 (defun sane-user-flags (inotify pathname flags &key (replace-p T))
   (check-type flags watch-flag-list)
@@ -327,9 +328,9 @@ the flags mask is replaced rather than OR-ed to the current mask (if it
 exists).  The :MASK-ADD flag is therefore removed from the FLAGS argument."
   (let* ((flags (sane-user-flags inotify pathname flags :replace-p replace-p))
          (handle (watch-raw inotify pathname flags))
-         (cons (cons handle flags)))
-    (setf (gethash pathname (inotify-pathnames inotify)) cons
-          (gethash handle (inotify-handles inotify)) cons)
+         (list (list pathname handle flags)))
+    (setf (gethash pathname (inotify-pathnames inotify)) list
+          (gethash handle (inotify-handles inotify)) list)
     handle))
 
 (defun unwatch (inotify &key pathname event handle)
