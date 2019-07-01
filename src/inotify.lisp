@@ -213,11 +213,17 @@ the file descriptor is set to non-blocking I/O."
              (set-nonblocking fd T))
            (setf stream
                  ;; TODO: what about the blocking?
-                 #-(or clisp sbcl)
+                 #-(or ccl clisp sbcl)
                  (osicat::make-fd-stream
                   fd
                   :direction :input
                   :element-type '(unsigned-byte 8))
+                 #+ccl
+                 (ccl::make-fd-stream
+                  fd
+                  :direction :input
+                  :element-type '(unsigned-byte 8)
+                  :auto-close T)
                  #+clisp
                  (ext:make-stream
                   fd
