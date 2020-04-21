@@ -322,7 +322,7 @@ registration.  If HANDLE is specified EVENT is ignored."
                         flags)))
     (let ((it (gethash pathname (inotify-pathnames inotify))))
       (if it
-          (union (cdr it) rep-flags :test #'eq)
+          (union (third it) rep-flags :test #'eq)
           rep-flags))))
 
 (defun watch (inotify pathname flags &key (replace-p T))
