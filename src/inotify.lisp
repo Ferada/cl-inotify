@@ -318,8 +318,8 @@ registration.  If HANDLE is specified EVENT is ignored."
   ;; merge the flags
   (let* ((flags (ensure-list flags))
          (rep-flags (if replace-p
-                        (cons :mask-add flags)
-                        flags)))
+                        flags
+                        (cons :mask-add flags))))
     (let ((it (gethash pathname (inotify-pathnames inotify))))
       (if it
           (union (cdr it) rep-flags :test #'eq)
