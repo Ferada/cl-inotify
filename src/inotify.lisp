@@ -316,14 +316,16 @@ registration.  If HANDLE is specified EVENT is ignored."
   (check-type flags watch-flag-list)
   ;; now, :mask-add can't be member of flags
   ;; merge the flags
-  (let* ((flags (ensure-list flags))
-         (rep-flags (if replace-p
-                        flags
-                        (cons :mask-add flags))))
-    (let ((it (gethash pathname (inotify-pathnames inotify))))
-      (if it
-          (union (third it) rep-flags :test #'eq)
-          rep-flags))))
+  ;; 20220310 mgr:
+  ;;   - if we UNION already we don't need :mask-add
+  ;;   - :mask-add is actually just ignored here and not necessary
+  ;;   - storing :mask-add in the inotify-pathnames hash is also strange
+  (let* ((flags (ensure-list flags)))
+    (if replace-p
+        flags
+        (union (third (gethash pathname (inotify-pathnames inotify)))
+               flags
+               :test #'eq))))
 
 (defun watch (inotify pathname flags &key (replace-p T))
   "Adds PATHNAME (either pathname or string) to be watched and records the
@@ -332,6 +334,7 @@ inotify(7) for detailed information).  Returns a handle which can be used
 with UNWATCH and EVENT-PATHNAME/FLAGS.  If REPLACE-P is set to T (default),
 the flags mask is replaced rather than OR-ed to the current mask (if it
 exists).  The :MASK-ADD flag is therefore removed from the FLAGS argument."
+  ;; :mask-add is actually nowhere removed (20220310 mgr)
   (let* ((flags (sane-user-flags inotify pathname flags :replace-p replace-p))
          (handle (watch-raw inotify pathname flags))
          (list (list pathname handle flags)))
