@@ -305,7 +305,7 @@ closed with CLOSE-INOTIFY."
 being watched by INOTIFY, else NIL.  The match is exact."
   (cdr (gethash pathname (inotify-pathnames inotify))))
 
-(defun event-pathname/flags (inotify event &optional (handle (slot-value event 'wd)))
+(defun event-pathname/flags (inotify event &optional (handle (inotify-event-wd event)))
   "Returns two values PATHNAME and FLAGS for an EVENT which were used during
 registration.  If HANDLE is specified EVENT is ignored."
   (let ((list (gethash handle (inotify-handles inotify))))
@@ -348,7 +348,7 @@ may be one from a given EVENT) or PATHNAME."
   (unless (or pathname event handle)
     (error "either PATHNAME, EVENT or HANDLE have to be specified"))
   (when event
-    (setf handle (slot-value event 'wd)))
+    (setf handle (inotify-event-wd event)))
   (let ((handle (or handle
                     (car (pathname-handle/flags inotify pathname))
                     (error "PATHNAME ~S isn't being watched" pathname)))
