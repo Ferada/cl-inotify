@@ -22,6 +22,17 @@ needed.  Reading the next sections and the docstrings of exported
 symbols should get you going, otherwise the source itself may also be of
 some value.
 
+# Installation
+
+On Debian-like systems -
+
+```
+$ apt install libfixposix-dev
+```
+
+```lisp
+(ql:quickload :cl-inotify)
+```
 
 # REPLSHOT
 
