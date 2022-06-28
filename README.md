@@ -39,16 +39,18 @@ $ apt install libfixposix-dev
 Macros make keeping track easier, so the following example is
 straightforward:
 
-    > (with-inotify (inotify T ("." :all-events))
-    >   (do-events (event inotify :blocking-p T)
-    >     (format T "~A~%" event)))
-    > =>
-    > #S(CL-INOTIFY::INOTIFY-EVENT :WD 1 :MASK (CREATE) :COOKIE 0 :NAME .zshist.LOCK)
-    > #S(CL-INOTIFY::INOTIFY-EVENT :WD 1 :MASK (OPEN) :COOKIE 0 :NAME .zshist)
-    > #S(CL-INOTIFY::INOTIFY-EVENT :WD 1 :MASK (MODIFY) :COOKIE 0 :NAME .zshist)
-    > #S(CL-INOTIFY::INOTIFY-EVENT :WD 1 :MASK (CLOSE-WRITE) :COOKIE 0 :NAME .zshist)
-    > #S(CL-INOTIFY::INOTIFY-EVENT :WD 1 :MASK (DELETE) :COOKIE 0 :NAME .zshist.LOCK)
-    > ...
+```lisp
+(with-inotify (inotify T ("." :all-events))
+  (do-events (event inotify :blocking-p T)
+    (format T "~A~%" event)))
+;; =>
+#S(CL-INOTIFY::INOTIFY-EVENT :WD 1 :MASK (CREATE) :COOKIE 0 :NAME .zshist.LOCK)
+#S(CL-INOTIFY::INOTIFY-EVENT :WD 1 :MASK (OPEN) :COOKIE 0 :NAME .zshist)
+#S(CL-INOTIFY::INOTIFY-EVENT :WD 1 :MASK (MODIFY) :COOKIE 0 :NAME .zshist)
+#S(CL-INOTIFY::INOTIFY-EVENT :WD 1 :MASK (CLOSE-WRITE) :COOKIE 0 :NAME .zshist)
+#S(CL-INOTIFY::INOTIFY-EVENT :WD 1 :MASK (DELETE) :COOKIE 0 :NAME .zshist.LOCK)
+...
+```
 
 (Tilde-expansion has to happen at another level, else I would've used
 that.)
@@ -67,13 +69,14 @@ You don't have to use macros: all functionality is available in function
 form, although some care should be taken as currently no cleanup handler
 is registered for opened queues, or rather their file handles.
 
-    > (use-package '#:cl-inotify)
-    > (defvar *tmp*)
-    > (setf *tmp* (make-notify))
-    > (watch *tmp* "/var/tmp/" :all-events)
-    > (next-events *tmp*)
-    > (close-inotify *tmp*)
-
+```lisp
+(use-package '#:cl-inotify)
+(defvar *tmp*)
+(setf *tmp* (make-notify))
+(watch *tmp* "/var/tmp/" :all-events)
+(next-events *tmp*)
+(close-inotify *tmp*)
+```
 
 # HOWTO
 
@@ -133,13 +136,15 @@ afterwards.  Currently no such functionality is integrated here, however
 the following sketch shows how something can be accomplished using
 iolib:
 
-    (with-unregistered-inotify (inotify T ("." :all-events))
-      (flet ((inotify-input (&rest rest)
-               (declare (ignore rest))
-               (format T "~{~A~%~}" (next-events inotify))))
-        (iolib:with-event-base (event-base)
-          (iolib:set-io-handler event-base (inotify-fd inotify) :read #'inotify-input)
-          (iolib:event-dispatch event-base))))
+```lisp
+(with-unregistered-inotify (inotify T ("." :all-events))
+  (flet ((inotify-input (&rest rest)
+           (declare (ignore rest))
+           (format T "~{~A~%~}" (next-events inotify))))
+    (iolib:with-event-base (event-base)
+      (iolib:set-io-handler event-base (inotify-fd inotify) :read #'inotify-input)
+      (iolib:event-dispatch event-base))))
+```
 
 Note that we perform all inotify business only when something happens in
 that directory, so instead of doing nothing, we could actually do useful
